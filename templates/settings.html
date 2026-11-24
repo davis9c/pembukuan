@@ -83,10 +83,14 @@
             <!-- Tab UserGate -->
             {{if .GateEnabled}}
             <div class="tab-pane fade" id="gate">
+                <div class="alert alert-info py-2">
+                    <strong>UserGate terhubung.</strong> Login user akan melalui UserGate.
+                    {{if .LocalAdminEnabled}}<br><small>Set <code>LOCAL_ADMIN_ENABLED=false</code> di .env setelah super admin dari UserGate siap.</small>{{end}}
+                </div>
                 <div class="card shadow-sm mb-3">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-center mb-3">
-                            <strong>UserGate Users</strong>
+                            <strong>Daftar User di UserGate</strong>
                             <form method="POST" action="/settings/usergate/sync" class="d-inline">
                                 <button class="btn btn-outline-primary btn-sm">Sync Token</button>
                             </form>
@@ -109,9 +113,10 @@
                                             {{else}}<span class="badge text-bg-secondary">{{.Status}}</span>{{end}}
                                         </td>
                                         <td class="text-end">
-                                            <form method="POST" action="/settings/usergate/import" class="d-inline">
+                                            <form method="POST" action="/settings/usergate/set-superadmin" class="d-inline" onsubmit="return confirm('Jadikan user ini Super Admin?')">
                                                 <input type="hidden" name="gate_user_id" value="{{.ID}}">
-                                                <button class="btn btn-outline-success btn-sm">Import</button>
+                                                <input type="hidden" name="role" value="super_admin">
+                                                <button class="btn btn-outline-warning btn-sm">Jadikan Super Admin</button>
                                             </form>
                                         </td>
                                     </tr>
@@ -121,11 +126,16 @@
                         </div>
                         {{else}}
                         <div class="text-muted text-center py-3">
-                            Klik "Sync Token" untuk login UserGate dan memuat daftar user.<br>
-                            <small class="text-muted">Pastikan ADMIN_USER/ADMIN_PASS terdaftar di UserGate.</small>
+                            Klik "Sync Token" untuk login UserGate dan memuat daftar user.
                         </div>
                         {{end}}
                     </div>
+                </div>
+            </div>
+            {{else}}
+            <div class="tab-pane fade" id="gate">
+                <div class="alert alert-secondary py-2">
+                    <strong>UserGate tidak aktif.</strong> Set <code>USERGATE_ENABLED=true</code> dan isi <code>USERGATE_API_KEY</code> di .env, lalu restart.
                 </div>
             </div>
             {{end}}

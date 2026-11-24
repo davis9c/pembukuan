@@ -36,6 +36,13 @@ func main() {
 		log.Printf("usergate enabled: %s", baseURL)
 	}
 
+	localAdminEnabled = os.Getenv("LOCAL_ADMIN_ENABLED") != "false"
+	if localAdminEnabled {
+		log.Printf("local admin login enabled (admin: %s)", adminUser)
+	} else {
+		log.Printf("local admin login disabled")
+	}
+
 	tmpl = template.Must(template.New("").Funcs(funcMap).ParseFS(templateFS, "templates/*"))
 
 	mux := http.NewServeMux()
@@ -155,6 +162,12 @@ func main() {
 	mux.HandleFunc("/settings/usergate/import", requireSuperAdmin(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "POST" {
 			importGateUserHandler(w, r)
+			return
+		}
+	}))
+	mux.HandleFunc("/settings/usergate/set-superadmin", requireSuperAdmin(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" {
+			setGateSuperAdminHandler(w, r)
 			return
 		}
 	}))

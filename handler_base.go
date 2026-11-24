@@ -17,11 +17,12 @@ import (
 var templateFS embed.FS
 
 var (
-	db        *sql.DB
-	tmpl      *template.Template
-	adminUser string
-	adminPass string
-	ugClient  *UserGateClient
+	db                *sql.DB
+	tmpl              *template.Template
+	adminUser         string
+	adminPass         string
+	ugClient          *UserGateClient
+	localAdminEnabled bool
 )
 
 var funcMap = template.FuncMap{
@@ -116,6 +117,22 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	username := r.FormValue("username")
 	password := r.FormValue("password")
 
+	// Local admin bypass (only if enabled, for initial setup)
+	if localAdminEnabled && username == adminUser && password == adminPass {
+		u, err := getUserByUsername(db, username)
+		if err != nil {
+			hash, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+			createUser(db, username, string(hash), "super_admin")
+			u, _ = getUserByUsername(db, username)
+		}
+		if u.Role != "super_admin" {
+			updateUserRole(db, u.ID, "super_admin")
+		}
+		setSession(w, Session{UserID: u.ID, Username: u.Username, Role: "super_admin", Expires: time.Now().Add(24 * time.Hour)})
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
 	// UserGate mode
 	if ugClient != nil {
 		resp, err := ugClient.Login(username, password)
@@ -132,26 +149,19 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, "/login?error=Gagal+menyimpan+user", http.StatusSeeOther)
 			return
 		}
-		// cache usergate token in session for later API calls
 		ugClient.setToken(resp.Data.AccessToken, resp.Data.ExpiresIn)
 		setSession(w, Session{UserID: u.ID, Username: u.Username, Role: u.Role, Expires: time.Now().Add(24 * time.Hour)})
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
 
-	// Local mode
-	if username == adminUser && password == adminPass {
-		u, err := getUserByUsername(db, username)
-		if err != nil {
-			hash, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-			createUser(db, username, string(hash), "super_admin")
-			u, _ = getUserByUsername(db, username)
-		}
-		setSession(w, Session{UserID: u.ID, Username: u.Username, Role: "super_admin", Expires: time.Now().Add(24 * time.Hour)})
-		http.Redirect(w, r, "/", http.StatusSeeOther)
+	// Block env admin login when local admin is disabled
+	if !localAdminEnabled && username == adminUser {
+		http.Redirect(w, r, "/login?error=Login+admin+lokal+dinonaktifkan.+Gunakan+UserGate.", http.StatusSeeOther)
 		return
 	}
 
+	// Local DB fallback
 	hash, err := getUserPasswordHash(db, username)
 	if err != nil || bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)) != nil {
 		http.Redirect(w, r, "/login?error=Username+atau+password+salah", http.StatusSeeOther)

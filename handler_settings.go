@@ -25,10 +25,11 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 	errMsg := r.URL.Query().Get("error")
 
 	data := PageData{
-		"AllUsers":    users,
-		"Success":     success,
-		"Error":       errMsg,
-		"GateEnabled": ugClient != nil,
+		"AllUsers":          users,
+		"Success":           success,
+		"Error":             errMsg,
+		"GateEnabled":       ugClient != nil,
+		"LocalAdminEnabled": localAdminEnabled,
 	}.WithUser(s)
 
 	if ugClient != nil {
@@ -122,8 +123,6 @@ func importGateUserHandler(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/settings?error=Gagal+mengambil+user+dari+UserGate", http.StatusSeeOther)
 		return
 	}
-	// check roles - simple: if they can login, they're regular unless we know otherwise
-	// we can't determine is_super_admin from the user list endpoint, assume regular
 	role := "regular"
 	if _, err := getUserByUsername(db, ugUser.Username); err == nil {
 		http.Redirect(w, r, "/settings?error=Username+sudah+ada+lokal", http.StatusSeeOther)
@@ -134,6 +133,39 @@ func importGateUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.Redirect(w, r, "/settings?success=User+berhasil+diimport", http.StatusSeeOther)
+}
+
+func setGateSuperAdminHandler(w http.ResponseWriter, r *http.Request) {
+	if ugClient == nil {
+		http.Redirect(w, r, "/settings?error=UserGate+tidak+aktif", http.StatusSeeOther)
+		return
+	}
+	userID := r.FormValue("gate_user_id")
+	role := r.FormValue("role")
+	if role != "super_admin" {
+		role = "regular"
+	}
+	if userID == "" {
+		http.Redirect(w, r, "/settings?error=ID+user+tidak+valid", http.StatusSeeOther)
+		return
+	}
+	ugUser, err := ugClient.GetUser(userID)
+	if err != nil {
+		http.Redirect(w, r, "/settings?error=Gagal+mengambil+user+dari+UserGate", http.StatusSeeOther)
+		return
+	}
+	// upsert with specified role
+	u, err := upsertUserFromGate(db, ugUser.ID, ugUser.Username, role)
+	if err != nil {
+		http.Redirect(w, r, "/settings?error=Gagal+menyimpan+user", http.StatusSeeOther)
+		return
+	}
+	_ = u
+	label := "Super Admin"
+	if role != "super_admin" {
+		label = "Regular"
+	}
+	http.Redirect(w, r, "/settings?success=User+"+ugUser.Username+"+diset+sebagai+"+label, http.StatusSeeOther)
 }
 
 func syncGateUsersHandler(w http.ResponseWriter, r *http.Request) {
