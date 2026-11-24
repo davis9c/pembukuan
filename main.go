@@ -152,6 +152,10 @@ func main() {
 				auditPage(w, r)
 				return
 			}
+			if hasSuffix(path, "/print") {
+				printBookPage(w, r)
+				return
+			}
 		}
 		viewBook(w, r)
 	}))

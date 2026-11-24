@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="color-scheme" content="light dark">
+<script>(function(){var s=localStorage.getItem('theme')||'auto';document.documentElement.setAttribute('data-bs-theme',s==='auto'?(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):s);document.documentElement.setAttribute('data-theme-mode',s)})()</script>
+<title>Cetak - {{.Book.Name}}</title>
+<style>
+@media print {
+  body { font-family: Arial, sans-serif; font-size: 12px; margin: 0; padding: 10mm; }
+  .no-print { display: none; }
+  table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+  th, td { border: 1px solid #333; padding: 4px 6px; text-align: left; font-size: 11px; }
+  th { background: #eee; }
+  .text-end { text-align: right; }
+  .summary { margin-top: 15px; display: flex; justify-content: flex-end; gap: 20px; }
+  .summary-item { text-align: right; }
+  .summary-item label { display: block; font-size: 10px; text-transform: uppercase; color: #555; }
+  .summary-item span { font-weight: bold; font-size: 13px; }
+}
+@media screen {
+  body { background: var(--bs-body-bg); color: var(--bs-body-color); }
+  .container { max-width: 900px; margin: 20px auto; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="no-print d-flex justify-content-end mb-3">
+    <button class="btn btn-primary btn-sm" onclick="window.print()">Cetak</button>
+  </div>
+  <h4>Buku: {{.Book.Name}}</h4>
+  {{if .Book.Description}}<p class="text-muted">{{.Book.Description}}</p>{{end}}
+  {{if .Book.OwnerName}}<p class="small text-muted">Dibuat oleh {{.Book.OwnerName}}</p>{{end}}
+
+  {{if .Entries}}
+  <table>
+    <thead>
+      <tr>
+        <th>Tanggal</th>
+        <th>No. Bukti</th>
+        <th>Keterangan</th>
+        <th>Kategori</th>
+        <th>Tipe</th>
+        <th class="text-end">Debit</th>
+        <th class="text-end">Kredit</th>
+        <th class="text-end">Saldo</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{range .Entries}}
+      <tr>
+        <td>{{fmtDate .Date}}</td>
+        <td>{{.VoucherNo}}</td>
+        <td>{{.Description}}{{if .Voided}} <small class="text-muted">(VOID)</small>{{end}}</td>
+        <td>{{.Category}}</td>
+        <td>{{if eq .Type "debit"}}Debit{{else}}Kredit{{end}}</td>
+        <td class="text-end">{{if and (eq .Type "debit") (not .Voided)}}Rp {{fmtAmount .Amount}}{{else}}-{{end}}</td>
+        <td class="text-end">{{if and (eq .Type "credit") (not .Voided)}}Rp {{fmtAmount .Amount}}{{else}}-{{end}}</td>
+        <td class="text-end">Rp {{fmtAmount .RunningBalance}}</td>
+      </tr>
+      {{end}}
+    </tbody>
+  </table>
+  <div class="summary">
+    <div class="summary-item"><label>Total Debit</label><span>Rp {{fmtAmount .TotalDebit}}</span></div>
+    <div class="summary-item"><label>Total Kredit</label><span>Rp {{fmtAmount .TotalCredit}}</span></div>
+    <div class="summary-item"><label>Saldo</label><span>Rp {{fmtAmount .Balance}}</span></div>
+  </div>
+  {{else}}
+  <p class="text-muted">Belum ada entri.</p>
+  {{end}}
+</div>
+</body>
+</html>

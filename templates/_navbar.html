@@ -1,0 +1,52 @@
+<!-- Shared navbar -->
+<nav class="navbar navbar-expand navbar-dark bg-primary">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="/"><strong>Pembukuan</strong></a>
+    <ul class="navbar-nav ms-auto align-items-center">
+      <li class="nav-item">
+        <button class="btn btn-link nav-link px-2 theme-toggle" type="button" title="Ganti tema" onclick="toggleTheme()">
+          <span class="theme-icon">🌙</span>
+        </button>
+      </li>
+      <li class="nav-item dropdown">
+        <a class="nav-link d-flex align-items-center gap-2 dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
+          <span class="avatar-circle">?</span>
+          <span class="d-flex flex-column lh-1">
+            <span>{{if .User}}{{.User.Username}}{{end}}</span>
+            <small class="text-white-50">{{if .User}}{{if .User.IsSuperAdmin}}Super Admin{{else}}Pengguna{{end}}{{end}}</small>
+          </span>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-end">
+          {{if .User}}{{if .User.IsSuperAdmin}}<li><a class="dropdown-item" href="/settings">Pengaturan</a></li>{{end}}{{end}}
+          <li><hr class="dropdown-divider"></li>
+          <li><a class="dropdown-item" href="/logout">Keluar</a></li>
+        </ul>
+      </li>
+    </ul>
+  </div>
+</nav>
+<script>
+function toggleTheme() {
+  var mode = document.documentElement.getAttribute('data-theme-mode') || 'auto';
+  var next = mode === 'dark' ? 'light' : (mode === 'light' ? 'auto' : 'dark');
+  var resolved = next === 'auto' ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : next;
+  document.documentElement.setAttribute('data-bs-theme', resolved);
+  document.documentElement.setAttribute('data-theme-mode', next);
+  localStorage.setItem('theme', next);
+  var icon = document.querySelector('.theme-icon');
+  if (icon) icon.textContent = next === 'dark' ? '☀️' : (next === 'light' ? '🌙' : '🌗');
+}
+(function() {
+  var mode = document.documentElement.getAttribute('data-theme-mode') || 'auto';
+  var icon = document.querySelector('.theme-icon');
+  if (icon) icon.textContent = mode === 'dark' ? '☀️' : (mode === 'light' ? '🌙' : '🌗');
+})();
+</script>
+<style>
+.avatar-circle {
+  width: 32px; height: 32px; border-radius: 50%;
+  background: #6c757d; color: #fff; font-size: .75rem; font-weight: 600;
+  display: inline-flex; align-items: center; justify-content: center;
+  text-transform: uppercase;
+}
+</style>

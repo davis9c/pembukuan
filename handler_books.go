@@ -125,7 +125,6 @@ func viewBook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	debit, credit, _ := getBalance(db, bookID)
-	success := r.URL.Query().Get("success")
 
 	attMap := make(map[int][]Attachment)
 	for _, e := range entries {
@@ -144,7 +143,44 @@ func viewBook(w http.ResponseWriter, r *http.Request) {
 		"Balance":     book.OpeningBalance + debit - credit,
 		"CanEdit":     canEdit,
 		"CanManage":   canManage,
-		"Success":     success,
+		"Success":     r.URL.Query().Get("success"),
+	}.WithUser(s))
+}
+
+func printBookPage(w http.ResponseWriter, r *http.Request) {
+	s := getSession(r)
+	book, bookID := resolveBook(r.URL.Path)
+	if book == nil {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+	role, err := getUserBookRole(db, s.UserID, bookID)
+	if err != nil && s.Role != "super_admin" {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+	_ = role
+	entries, _ := getEntries(db, bookID)
+	bal := book.OpeningBalance
+	for i := range entries {
+		if entries[i].Voided {
+			entries[i].RunningBalance = bal
+			continue
+		}
+		if entries[i].Type == "debit" {
+			bal += entries[i].Amount
+		} else {
+			bal -= entries[i].Amount
+		}
+		entries[i].RunningBalance = bal
+	}
+	debit, credit, _ := getBalance(db, bookID)
+	tmpl.ExecuteTemplate(w, "print.html", PageData{
+		"Book":        book,
+		"Entries":     entries,
+		"TotalDebit":  debit,
+		"TotalCredit": credit,
+		"Balance":     book.OpeningBalance + debit - credit,
 	}.WithUser(s))
 }
 

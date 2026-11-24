@@ -4,24 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light dark">
-    <script>document.documentElement.setAttribute('data-bs-theme',matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light')</script>
+    <script>(function(){var s=localStorage.getItem('theme')||'auto';document.documentElement.setAttribute('data-bs-theme',s==='auto'?(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):s);document.documentElement.setAttribute('data-theme-mode',s)})()</script>
     <title>{{.Book.Name}} - Pembukuan</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css">
 </head>
 <body>
-    <nav class="navbar navbar-expand navbar-dark bg-primary">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="/"><strong>Pembukuan</strong></a>
-            <ul class="navbar-nav ms-auto align-items-center">
-                <li class="nav-item"><span class="nav-link text-white-50 small">{{.User.Username}}</span></li>
-                {{if .User.IsSuperAdmin}}
-                <li class="nav-item"><a class="nav-link small" href="/settings">Pengaturan</a></li>
-                {{end}}
-                <li class="nav-item"><a class="nav-link small" href="/logout">Keluar</a></li>
-            </ul>
-        </div>
-    </nav>
+    {{template "_navbar.html" .}}
     <div class="container mt-4">
         <nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="/">Dashboard</a></li><li class="breadcrumb-item active">{{.Book.Name}}</li></ol></nav>
         {{if .Success}}<div class="alert alert-info">{{.Success}}</div>{{end}}
@@ -40,6 +29,7 @@
                 <button class="btn btn-outline-primary btn-sm" onclick="loadFragment('/books/{{.Book.Slug}}/share?fragment=1','shareBody','shareModal')">Bagikan</button>
                 {{end}}
                 <button class="btn btn-outline-secondary btn-sm" onclick="loadFragment('/books/{{.Book.Slug}}/audit?fragment=1','auditBody','auditModal')">Audit</button>
+                <a class="btn btn-outline-secondary btn-sm" href="/books/{{.Book.Slug}}/print" target="_blank">Cetak</a>
                 {{if and (not .CanManage) (not .Guest)}}
                 <form method="POST" action="/books/{{.Book.Slug}}/leave" class="d-inline"><button class="btn btn-outline-danger btn-sm">Keluar</button></form>
                 {{end}}
@@ -87,13 +77,13 @@
                         <th class="small text-muted text-uppercase text-end">Kredit</th>
                         <th class="small text-muted text-uppercase text-end">Saldo</th>
                         <th class="small text-muted text-uppercase">Bukti</th>
-                        <th class="small text-muted text-uppercase">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
                     {{range .Entries}}
                     <tr class="entry-row" style="cursor:pointer"
                         data-id="{{.ID}}"
+                        data-datetime="{{.Date}}"
                         data-date="{{fmtDate .Date}}"
                         data-voucher="{{.VoucherNo}}"
                         data-desc="{{.Description}}"
@@ -137,14 +127,6 @@
                             </div>
                             {{else}}<span class="text-muted small">-</span>{{end}}
                         </td>
-                        <td class="text-nowrap">
-                            {{if $.CanEdit}}
-                            <button class="btn btn-sm btn-outline-primary edit-entry-btn" data-id="{{.ID}}" data-date="{{fmtDate .Date}}" data-voucher="{{.VoucherNo}}" data-desc="{{.Description}}" data-category="{{.Category}}" data-party="{{.Party}}" data-type="{{.Type}}" data-amount="{{.Amount}}" data-note="{{.Note}}">Edit</button>
-                            {{if not .Voided}}
-                            <form method="POST" action="/books/{{$.Book.Slug}}/entries/{{.ID}}/void" class="d-inline" onsubmit="return confirm('Void transaksi ini?')"><button class="btn btn-sm btn-outline-warning">Void</button></form>
-                            {{end}}
-                            {{end}}
-                        </td>
                     </tr>
                     {{end}}
                 </tbody>
@@ -175,6 +157,13 @@
                         <dt class="col-sm-4">Saldo Berjalan</dt><dd class="col-sm-8" id="d-balance"></dd>
                         <dt class="col-sm-4">Catatan</dt><dd class="col-sm-8" id="d-note"></dd>
                     </dl>
+                </div>
+                <div class="modal-footer">
+                    {{if .CanEdit}}
+                    <button class="btn btn-outline-warning btn-sm" id="detailVoidBtn" style="display:none">Void</button>
+                    <button class="btn btn-primary btn-sm" id="detailEditBtn" style="display:none">Edit</button>
+                    {{end}}
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Tutup</button>
                 </div>
             </div>
         </div>
@@ -253,11 +242,55 @@
                 document.getElementById('d-desc').textContent = d.desc || '-';
                 document.getElementById('d-category').textContent = d.category || '-';
                 document.getElementById('d-party').textContent = d.party || '-';
-                document.getElementById('d-type').textContent = d.type;
+                document.getElementById('d-type').textContent = d.type === 'debit' ? 'Debit (Uang Masuk)' : 'Kredit (Uang Keluar)';
                 document.getElementById('d-amount').textContent = 'Rp ' + Number(d.amount).toLocaleString('id-ID');
                 document.getElementById('d-balance').textContent = 'Rp ' + Number(d.balance).toLocaleString('id-ID');
                 document.getElementById('d-note').textContent = d.note || '-';
-                new bootstrap.Modal(document.getElementById('detailModal')).show();
+                // store entry data for edit/void from detail modal
+                var detailModal = document.getElementById('detailModal');
+                detailModal.dataset.id = d.id;
+                detailModal.dataset.datetime = d.datetime;
+                detailModal.dataset.type = d.type;
+                detailModal.dataset.amount = d.amount;
+                detailModal.dataset.voucher = d.voucher;
+                detailModal.dataset.category = d.category;
+                detailModal.dataset.party = d.party;
+                detailModal.dataset.desc = d.desc;
+                detailModal.dataset.note = d.note;
+                detailModal.dataset.voided = d.voided;
+                var editBtn = document.getElementById('detailEditBtn');
+                var voidBtn = document.getElementById('detailVoidBtn');
+                if (editBtn) editBtn.style.display = d.voided === 'true' ? 'none' : 'inline-block';
+                if (voidBtn) voidBtn.style.display = (d.voided !== 'true') ? 'inline-block' : 'none';
+                new bootstrap.Modal(detailModal).show();
+            });
+
+            // Detail modal: Edit button
+            $('#detailEditBtn').on('click', function() {
+                var d = document.getElementById('detailModal').dataset;
+                $('#detailModal').modal('hide');
+                $('#editEntryId').val(d.id);
+                $('#editDate').val(d.datetime);
+                $('#editType').val(d.type);
+                $('#editAmount').val(d.amount);
+                $('#editVoucher').val(d.voucher);
+                $('#editCategory').val(d.category);
+                $('#editParty').val(d.party);
+                $('#editDesc').val(d.desc);
+                $('#editNote').val(d.note);
+                $('#editError').hide();
+                $('#editModal').modal('show');
+            });
+
+            // Detail modal: Void button
+            $('#detailVoidBtn').on('click', function() {
+                if (!confirm('Void transaksi ini?')) return;
+                var entryID = document.getElementById('detailModal').dataset.id;
+                $('#detailModal').modal('hide');
+                $.ajax({ url: '/books/'+slug+'/entries/'+entryID+'/void', method: 'POST',
+                    success: function() { reloadPage(); },
+                    error: function() { alert('Gagal void'); }
+                });
             });
 
             // New entry form submit via AJAX
@@ -275,21 +308,6 @@
                 });
             });
 
-            // Edit entry: populate modal from row data
-            $(document).on('click', '.edit-entry-btn', function() {
-                var d = this.dataset;
-                $('#editEntryId').val(d.id);
-                $('#editDate').val(d.date);
-                $('#editType').val(d.type);
-                $('#editAmount').val(d.amount);
-                $('#editVoucher').val(d.voucher);
-                $('#editCategory').val(d.category);
-                $('#editParty').val(d.party);
-                $('#editDesc').val(d.desc);
-                $('#editNote').val(d.note);
-                $('#editError').hide();
-                new bootstrap.Modal(document.getElementById('editModal')).show();
-            });
             $('#editForm').on('submit', function(e) {
                 e.preventDefault();
                 var fd = new FormData(this);

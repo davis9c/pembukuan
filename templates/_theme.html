@@ -1,0 +1,9 @@
+<meta name="color-scheme" content="light dark">
+<script>
+(function(){
+  var s = localStorage.getItem('theme') || 'auto';
+  var resolved = s === 'auto' ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : s;
+  document.documentElement.setAttribute('data-bs-theme', resolved);
+  document.documentElement.setAttribute('data-theme-mode', s);
+})();
+</script>
