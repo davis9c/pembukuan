@@ -25,6 +25,17 @@ func main() {
 		log.Fatalf("failed to create uploads dir: %v", err)
 	}
 
+	// UserGate integration
+	if os.Getenv("USERGATE_ENABLED") == "true" {
+		baseURL := os.Getenv("USERGATE_BASE_URL")
+		apiKey := os.Getenv("USERGATE_API_KEY")
+		if baseURL == "" || apiKey == "" {
+			log.Fatalf("USERGATE_ENABLED=true but USERGATE_BASE_URL or USERGATE_API_KEY is empty")
+		}
+		ugClient = NewUserGateClient(baseURL, apiKey)
+		log.Printf("usergate enabled: %s", baseURL)
+	}
+
 	tmpl = template.Must(template.New("").Funcs(funcMap).ParseFS(templateFS, "templates/*"))
 
 	mux := http.NewServeMux()
@@ -109,6 +120,44 @@ func main() {
 	}))
 
 	mux.HandleFunc("/attachments/", authMiddleware(serveAttachmentHandler))
+
+	// settings (super_admin only)
+	mux.HandleFunc("/settings", requireSuperAdmin(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "GET" {
+			settingsPage(w, r)
+			return
+		}
+	}))
+	mux.HandleFunc("/settings/users", requireSuperAdmin(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" {
+			createLocalUserHandler(w, r)
+			return
+		}
+	}))
+	mux.HandleFunc("/settings/users/edit", requireSuperAdmin(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" {
+			editUserRoleHandler(w, r)
+			return
+		}
+	}))
+	mux.HandleFunc("/settings/users/delete", requireSuperAdmin(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" {
+			deleteLocalUserHandler(w, r)
+			return
+		}
+	}))
+	mux.HandleFunc("/settings/usergate/sync", requireSuperAdmin(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" {
+			syncGateUsersHandler(w, r)
+			return
+		}
+	}))
+	mux.HandleFunc("/settings/usergate/import", requireSuperAdmin(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" {
+			importGateUserHandler(w, r)
+			return
+		}
+	}))
 
 	port := envOrDefault("PORT", "8080")
 	log.Printf("server starting on :%s (admin: %s)", port, adminUser)

@@ -9,7 +9,9 @@
 <body>
     <nav class="navbar navbar-dark bg-primary px-3">
         <a class="navbar-brand" href="/"><strong>Pembukuan</strong></a>
-        <span class="navbar-text text-white small">{{.User.Username}} &middot; <a href="/logout" class="text-white text-decoration-none">Keluar</a></span>
+        <span class="navbar-text text-white small">{{.User.Username}}
+            {{if .User.IsSuperAdmin}}&middot; <a href="/settings" class="text-white text-decoration-none">Pengaturan</a>{{end}}
+            &middot; <a href="/logout" class="text-white text-decoration-none">Keluar</a></span>
     </nav>
     <div class="container mt-4" style="max-width: 560px;">
         <nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="/">Dashboard</a></li><li class="breadcrumb-item"><a href="/books/{{.Book.ID}}">{{.Book.Name}}</a></li><li class="breadcrumb-item active">Entri Baru</li></ol></nav>

@@ -21,6 +21,7 @@ var (
 	tmpl      *template.Template
 	adminUser string
 	adminPass string
+	ugClient  *UserGateClient
 )
 
 var funcMap = template.FuncMap{
@@ -115,6 +116,30 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	username := r.FormValue("username")
 	password := r.FormValue("password")
 
+	// UserGate mode
+	if ugClient != nil {
+		resp, err := ugClient.Login(username, password)
+		if err != nil {
+			http.Redirect(w, r, "/login?error="+err.Error(), http.StatusSeeOther)
+			return
+		}
+		role := "regular"
+		if resp.Data.User.IsSuperAdmin {
+			role = "super_admin"
+		}
+		u, err := upsertUserFromGate(db, resp.Data.User.ID, username, role)
+		if err != nil {
+			http.Redirect(w, r, "/login?error=Gagal+menyimpan+user", http.StatusSeeOther)
+			return
+		}
+		// cache usergate token in session for later API calls
+		ugClient.setToken(resp.Data.AccessToken, resp.Data.ExpiresIn)
+		setSession(w, Session{UserID: u.ID, Username: u.Username, Role: u.Role, Expires: time.Now().Add(24 * time.Hour)})
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+
+	// Local mode
 	if username == adminUser && password == adminPass {
 		u, err := getUserByUsername(db, username)
 		if err != nil {

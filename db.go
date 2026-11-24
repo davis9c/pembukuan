@@ -60,6 +60,40 @@ func getAllUsers(db *sql.DB) ([]User, error) {
 	return users, nil
 }
 
+func upsertUserFromGate(db *sql.DB, ugID, username, role string) (*User, error) {
+	// insert or update user from usergate (no password stored)
+	u, err := getUserByUsername(db, username)
+	if err != nil {
+		_, err := db.Exec("INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)", username, "", role)
+		if err != nil {
+			return nil, err
+		}
+		return getUserByUsername(db, username)
+	}
+	// update role if changed
+	if u.Role != role && role != "" {
+		db.Exec("UPDATE users SET role = ? WHERE id = ?", role, u.ID)
+		u.Role = role
+	}
+	return u, nil
+}
+
+func updateUserRole(db *sql.DB, userID int, role string) error {
+	_, err := db.Exec("UPDATE users SET role = ? WHERE id = ?", role, userID)
+	return err
+}
+
+func updateUserPassword(db *sql.DB, userID int, hash string) error {
+	_, err := db.Exec("UPDATE users SET password_hash = ? WHERE id = ?", hash, userID)
+	return err
+}
+
+func deleteUserByID(db *sql.DB, userID int) error {
+	db.Exec("DELETE FROM book_users WHERE user_id = ?", userID)
+	_, err := db.Exec("DELETE FROM users WHERE id = ?", userID)
+	return err
+}
+
 // ---------- book queries ----------
 
 func createBook(db *sql.DB, name, desc string) (int64, error) {
