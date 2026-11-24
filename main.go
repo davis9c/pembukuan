@@ -25,22 +25,15 @@ func main() {
 		log.Fatalf("failed to create uploads dir: %v", err)
 	}
 
-	// UserGate integration — env overrides, then DB settings
-	if os.Getenv("USERGATE_ENABLED") == "true" || getSetting(db, "usergate_enabled") == "true" {
-		baseURL := os.Getenv("USERGATE_BASE_URL")
-		if baseURL == "" {
-			baseURL = getSetting(db, "usergate_base_url")
-		}
-		apiKey := os.Getenv("USERGATE_API_KEY")
-		if apiKey == "" {
-			apiKey = getSetting(db, "usergate_api_key")
-		}
-		if baseURL == "" || apiKey == "" {
-			log.Printf("UserGate enabled but missing URL or API key — check settings page")
-		} else {
-			ugClient = NewUserGateClient(baseURL, apiKey)
-			log.Printf("usergate enabled: %s", baseURL)
-		}
+	// UserGate integration — from DB settings only
+	baseURL := getSetting(db, "usergate_base_url")
+	apiKey := getSetting(db, "usergate_api_key")
+	enabled := getSetting(db, "usergate_enabled")
+	if enabled == "true" && baseURL != "" && apiKey != "" {
+		ugClient = NewUserGateClient(baseURL, apiKey)
+		log.Printf("usergate enabled: %s", baseURL)
+	} else {
+		log.Printf("usergate disabled (configure in /settings)")
 	}
 
 	localAdminEnabled = os.Getenv("LOCAL_ADMIN_ENABLED") != "false"
