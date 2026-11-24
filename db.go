@@ -273,6 +273,19 @@ func countAttachments(db *sql.DB, entryID int) (int, error) {
 	return n, err
 }
 
+// ---------- settings queries ----------
+
+func getSetting(db *sql.DB, key string) string {
+	var v string
+	db.QueryRow("SELECT value FROM settings WHERE key = ?", key).Scan(&v)
+	return v
+}
+
+func setSetting(db *sql.DB, key, value string) error {
+	_, err := db.Exec("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", key, value)
+	return err
+}
+
 func nowStr() string {
 	return time.Now().Format("2006-01-02T15:04")
 }

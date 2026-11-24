@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"net/http"
 	"strconv"
 
@@ -24,16 +25,24 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 	success := r.URL.Query().Get("success")
 	errMsg := r.URL.Query().Get("error")
 
+	gateEnabled := ugClient != nil
+	gateBaseURL := getSetting(db, "usergate_base_url")
+	gateAPIKey := getSetting(db, "usergate_api_key")
+	if gateBaseURL == "" {
+		gateBaseURL = "https://usergate.sandalgurun.web.id/api/v1"
+	}
+
 	data := PageData{
 		"AllUsers":          users,
 		"Success":           success,
 		"Error":             errMsg,
-		"GateEnabled":       ugClient != nil,
+		"GateEnabled":       gateEnabled,
+		"GateBaseURL":       gateBaseURL,
+		"GateAPIKey":        gateAPIKey,
 		"LocalAdminEnabled": localAdminEnabled,
 	}.WithUser(s)
 
 	if ugClient != nil {
-		// fetch usergate users for display
 		if ugResp, err := ugClient.GetUsers(1, 100, ""); err == nil {
 			data["GateUsers"] = ugResp.Data
 			data["GateTotal"] = ugResp.Meta.Total
@@ -41,6 +50,27 @@ func settingsPage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	tmpl.ExecuteTemplate(w, "settings.html", data)
+}
+
+func saveGateConfigHandler(w http.ResponseWriter, r *http.Request) {
+	enabled := r.FormValue("gate_enabled") == "true"
+	baseURL := r.FormValue("gate_base_url")
+	apiKey := r.FormValue("gate_api_key")
+
+	setSetting(db, "usergate_enabled", r.FormValue("gate_enabled"))
+	setSetting(db, "usergate_base_url", baseURL)
+	setSetting(db, "usergate_api_key", apiKey)
+
+	// re-init or clear ugClient
+	if enabled && baseURL != "" && apiKey != "" {
+		ugClient = NewUserGateClient(baseURL, apiKey)
+		log.Printf("usergate re-initialized: %s", baseURL)
+	} else {
+		ugClient = nil
+		log.Printf("usergate disabled")
+	}
+
+	http.Redirect(w, r, "/settings?success=Konfigurasi+UserGate+disimpan", http.StatusSeeOther)
 }
 
 func createLocalUserHandler(w http.ResponseWriter, r *http.Request) {

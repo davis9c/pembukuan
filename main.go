@@ -25,15 +25,22 @@ func main() {
 		log.Fatalf("failed to create uploads dir: %v", err)
 	}
 
-	// UserGate integration
-	if os.Getenv("USERGATE_ENABLED") == "true" {
+	// UserGate integration — env overrides, then DB settings
+	if os.Getenv("USERGATE_ENABLED") == "true" || getSetting(db, "usergate_enabled") == "true" {
 		baseURL := os.Getenv("USERGATE_BASE_URL")
-		apiKey := os.Getenv("USERGATE_API_KEY")
-		if baseURL == "" || apiKey == "" {
-			log.Fatalf("USERGATE_ENABLED=true but USERGATE_BASE_URL or USERGATE_API_KEY is empty")
+		if baseURL == "" {
+			baseURL = getSetting(db, "usergate_base_url")
 		}
-		ugClient = NewUserGateClient(baseURL, apiKey)
-		log.Printf("usergate enabled: %s", baseURL)
+		apiKey := os.Getenv("USERGATE_API_KEY")
+		if apiKey == "" {
+			apiKey = getSetting(db, "usergate_api_key")
+		}
+		if baseURL == "" || apiKey == "" {
+			log.Printf("UserGate enabled but missing URL or API key — check settings page")
+		} else {
+			ugClient = NewUserGateClient(baseURL, apiKey)
+			log.Printf("usergate enabled: %s", baseURL)
+		}
 	}
 
 	localAdminEnabled = os.Getenv("LOCAL_ADMIN_ENABLED") != "false"
@@ -168,6 +175,12 @@ func main() {
 	mux.HandleFunc("/settings/usergate/set-superadmin", requireSuperAdmin(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "POST" {
 			setGateSuperAdminHandler(w, r)
+			return
+		}
+	}))
+	mux.HandleFunc("/settings/usergate/config", requireSuperAdmin(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" {
+			saveGateConfigHandler(w, r)
 			return
 		}
 	}))

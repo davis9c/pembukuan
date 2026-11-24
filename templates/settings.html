@@ -7,9 +7,16 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
-    <nav class="navbar navbar-dark bg-primary px-3">
-        <a class="navbar-brand" href="/"><strong>Pembukuan</strong></a>
-        <span class="navbar-text text-white small">{{.User.Username}} &middot; <a href="/logout" class="text-white text-decoration-none">Keluar</a></span>
+    <nav class="navbar navbar-expand navbar-dark bg-primary">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/"><strong>Pembukuan</strong></a>
+            <ul class="navbar-nav ms-auto align-items-center">
+                <li class="nav-item"><span class="nav-link text-white-50 small">{{.User.Username}}</span></li>
+                <li class="nav-item"><a class="nav-link small" href="/">Dashboard</a></li>
+                <li class="nav-item"><a class="nav-link small" href="/logout">Keluar</a></li>
+            </ul>
+        </div>
+    </nav>
     </nav>
     <div class="container mt-4" style="max-width: 900px;">
         <nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="/">Dashboard</a></li><li class="breadcrumb-item active">Pengaturan</li></ol></nav>
@@ -81,10 +88,30 @@
             </div>
 
             <!-- Tab UserGate -->
-            {{if .GateEnabled}}
             <div class="tab-pane fade" id="gate">
+                <div class="card shadow-sm mb-3">
+                    <div class="card-body">
+                        <h6 class="mb-3">Konfigurasi UserGate</h6>
+                        <form method="POST" action="/settings/usergate/config">
+                            <div class="mb-3">
+                                <label class="form-label">UserGate Base URL</label>
+                                <input type="text" name="gate_base_url" class="form-control" value="{{.GateBaseURL}}" placeholder="https://usergate.sandalgurun.web.id/api/v1">
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label">API Key</label>
+                                <input type="password" name="gate_api_key" class="form-control" value="{{.GateAPIKey}}" placeholder="Masukkan API Key">
+                            </div>
+                            <div class="form-check mb-3">
+                                <input type="checkbox" class="form-check-input" id="gateEnabled" name="gate_enabled" value="true" {{if .GateEnabled}}checked{{end}}>
+                                <label class="form-check-label" for="gateEnabled">Aktifkan UserGate</label>
+                            </div>
+                            <button type="submit" class="btn btn-primary">Simpan Konfigurasi</button>
+                        </form>
+                    </div>
+                </div>
+                {{if .GateEnabled}}
                 <div class="alert alert-info py-2">
-                    <strong>UserGate terhubung.</strong> Login user akan melalui UserGate.
+                    <strong>UserGate terhubung.</strong> Login akan melalui UserGate.
                     {{if .LocalAdminEnabled}}<br><small>Set <code>LOCAL_ADMIN_ENABLED=false</code> di .env setelah super admin dari UserGate siap.</small>{{end}}
                 </div>
                 <div class="card shadow-sm mb-3">
@@ -99,46 +126,27 @@
                         <small class="text-muted">Total: {{.GateTotal}} user</small>
                         <div class="table-responsive mt-2">
                             <table class="table table-hover align-middle mb-0">
-                                <thead class="table-light">
-                                    <tr><th>Username</th><th>Nama</th><th>Email</th><th>Status</th><th></th></tr>
-                                </thead>
-                                <tbody>
-                                    {{range .GateUsers}}
-                                    <tr>
-                                        <td>{{.Username}}</td>
-                                        <td>{{.FullName}}</td>
-                                        <td><small>{{.Email}}</small></td>
-                                        <td>
-                                            {{if eq .Status "ACTIVE"}}<span class="badge text-bg-success">Aktif</span>
-                                            {{else}}<span class="badge text-bg-secondary">{{.Status}}</span>{{end}}
-                                        </td>
-                                        <td class="text-end">
-                                            <form method="POST" action="/settings/usergate/set-superadmin" class="d-inline" onsubmit="return confirm('Jadikan user ini Super Admin?')">
-                                                <input type="hidden" name="gate_user_id" value="{{.ID}}">
-                                                <input type="hidden" name="role" value="super_admin">
-                                                <button class="btn btn-outline-warning btn-sm">Jadikan Super Admin</button>
-                                            </form>
-                                        </td>
-                                    </tr>
-                                    {{end}}
-                                </tbody>
+                                <thead class="table-light"><tr><th>Username</th><th>Nama</th><th>Email</th><th>Status</th><th></th></tr></thead>
+                                <tbody>{{range .GateUsers}}<tr>
+                                    <td>{{.Username}}</td><td>{{.FullName}}</td><td><small>{{.Email}}</small></td>
+                                    <td>{{if eq .Status "ACTIVE"}}<span class="badge text-bg-success">Aktif</span>{{else}}<span class="badge text-bg-secondary">{{.Status}}</span>{{end}}</td>
+                                    <td class="text-end">
+                                        <form method="POST" action="/settings/usergate/set-superadmin" class="d-inline" onsubmit="return confirm('Jadikan user ini Super Admin?')">
+                                            <input type="hidden" name="gate_user_id" value="{{.ID}}">
+                                            <input type="hidden" name="role" value="super_admin">
+                                            <button class="btn btn-outline-warning btn-sm">Jadikan Super Admin</button>
+                                        </form>
+                                    </td>
+                                </tr>{{end}}</tbody>
                             </table>
                         </div>
                         {{else}}
-                        <div class="text-muted text-center py-3">
-                            Klik "Sync Token" untuk login UserGate dan memuat daftar user.
-                        </div>
+                        <div class="text-muted text-center py-3">Klik "Sync Token" untuk memuat daftar user.</div>
                         {{end}}
                     </div>
                 </div>
+                {{end}}
             </div>
-            {{else}}
-            <div class="tab-pane fade" id="gate">
-                <div class="alert alert-secondary py-2">
-                    <strong>UserGate tidak aktif.</strong> Set <code>USERGATE_ENABLED=true</code> dan isi <code>USERGATE_API_KEY</code> di .env, lalu restart.
-                </div>
-            </div>
-            {{end}}
         </div>
     </div>
 
