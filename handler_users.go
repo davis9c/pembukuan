@@ -15,7 +15,7 @@ func manageUsersPage(w http.ResponseWriter, r *http.Request) {
 	if !canManage {
 		role, err := getUserBookRole(db, s.UserID, bookID)
 		if err == nil {
-			canManage = role == "admin"
+			canManage = role == "owner" || role == "admin"
 		}
 	}
 	if !canManage {
@@ -52,7 +52,7 @@ func addUserToBookHandler(w http.ResponseWriter, r *http.Request) {
 	if !canManage {
 		role, err := getUserBookRole(db, s.UserID, bookID)
 		if err == nil {
-			canManage = role == "admin"
+			canManage = role == "owner" || role == "admin"
 		}
 	}
 	if !canManage {
@@ -82,7 +82,7 @@ func removeUserFromBookHandler(w http.ResponseWriter, r *http.Request) {
 	if !canManage {
 		role, err := getUserBookRole(db, s.UserID, bookID)
 		if err == nil {
-			canManage = role == "admin"
+			canManage = role == "owner" || role == "admin"
 		}
 	}
 	if !canManage {

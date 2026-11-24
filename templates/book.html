@@ -34,34 +34,39 @@
                 {{end}}
                 {{if .CanManage}}
                 <a href="/books/{{.Book.ID}}/users" class="btn btn-outline-primary btn-sm">Kelola User</a>
+                <a href="/books/{{.Book.ID}}/share" class="btn btn-outline-primary btn-sm">Bagikan</a>
+                {{end}}
+                <a href="/books/{{.Book.ID}}/audit" class="btn btn-outline-secondary btn-sm">Audit</a>
+                {{if and (not .CanManage) (not .Guest)}}
+                <form method="POST" action="/books/{{.Book.ID}}/leave" class="d-inline"><button class="btn btn-outline-danger btn-sm">Keluar</button></form>
                 {{end}}
             </div>
         </div>
 
         <div class="row g-3 mb-4">
-            <div class="col-md-4">
-                <div class="card text-center">
-                    <div class="card-body py-3">
-                        <small class="text-muted text-uppercase">Total Debit</small>
-                        <div class="fs-5 fw-bold text-success">Rp {{fmtAmount .TotalDebit}}</div>
-                    </div>
-                </div>
+            <div class="col-md-3">
+                <div class="card text-center"><div class="card-body py-3">
+                    <small class="text-muted text-uppercase">Saldo Awal</small>
+                    <div class="fs-6 fw-bold">Rp {{fmtAmount .Book.OpeningBalance}}</div>
+                </div></div>
             </div>
-            <div class="col-md-4">
-                <div class="card text-center">
-                    <div class="card-body py-3">
-                        <small class="text-muted text-uppercase">Total Kredit</small>
-                        <div class="fs-5 fw-bold text-danger">Rp {{fmtAmount .TotalCredit}}</div>
-                    </div>
-                </div>
+            <div class="col-md-3">
+                <div class="card text-center"><div class="card-body py-3">
+                    <small class="text-muted text-uppercase">Total Debit</small>
+                    <div class="fs-6 fw-bold text-success">Rp {{fmtAmount .TotalDebit}}</div>
+                </div></div>
             </div>
-            <div class="col-md-4">
-                <div class="card text-center">
-                    <div class="card-body py-3">
-                        <small class="text-muted text-uppercase">Saldo</small>
-                        <div class="fs-5 fw-bold">Rp {{fmtAmount .Balance}}</div>
-                    </div>
-                </div>
+            <div class="col-md-3">
+                <div class="card text-center"><div class="card-body py-3">
+                    <small class="text-muted text-uppercase">Total Kredit</small>
+                    <div class="fs-6 fw-bold text-danger">Rp {{fmtAmount .TotalCredit}}</div>
+                </div></div>
+            </div>
+            <div class="col-md-3">
+                <div class="card text-center"><div class="card-body py-3">
+                    <small class="text-muted text-uppercase">Saldo</small>
+                    <div class="fs-6 fw-bold">Rp {{fmtAmount .Balance}}</div>
+                </div></div>
             </div>
         </div>
 
@@ -71,25 +76,49 @@
                 <thead class="table-light">
                     <tr>
                         <th class="small text-muted text-uppercase">Tanggal</th>
-                        <th class="small text-muted text-uppercase">Deskripsi</th>
+                        <th class="small text-muted text-uppercase">No. Bukti</th>
+                        <th class="small text-muted text-uppercase">Keterangan</th>
+                        <th class="small text-muted text-uppercase">Kategori</th>
                         <th class="small text-muted text-uppercase">Tipe</th>
-                        <th class="small text-muted text-uppercase text-end">Jumlah</th>
+                        <th class="small text-muted text-uppercase text-end">Debit</th>
+                        <th class="small text-muted text-uppercase text-end">Kredit</th>
+                        <th class="small text-muted text-uppercase text-end">Saldo</th>
                         <th class="small text-muted text-uppercase">Bukti</th>
+                        <th class="small text-muted text-uppercase">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
                     {{range .Entries}}
-                    <tr>
+                    <tr class="entry-row" style="cursor:pointer"
+                        data-id="{{.ID}}"
+                        data-date="{{fmtDate .Date}}"
+                        data-voucher="{{.VoucherNo}}"
+                        data-desc="{{.Description}}"
+                        data-category="{{.Category}}"
+                        data-party="{{.Party}}"
+                        data-type="{{.Type}}"
+                        data-amount="{{.Amount}}"
+                        data-balance="{{.RunningBalance}}"
+                        data-note="{{.Note}}"
+                        data-createdby="{{.CreatedBy}}"
+                        data-updatedby="{{.UpdatedBy}}"
+                        data-voided="{{.Voided}}">
                         <td class="small">{{fmtDate .Date}}</td>
-                        <td>{{.Description}}</td>
+                        <td class="small">{{.VoucherNo}}</td>
+                        <td>{{.Description}}{{if .Party}}<br><small class="text-muted">{{.Party}}</small>{{end}}</td>
+                        <td class="small">{{.Category}}</td>
                         <td>
-                            {{if eq .Type "debit"}}
+                            {{if .Voided}}
+                            <span class="badge bg-secondary">Void</span>
+                            {{else if eq .Type "debit"}}
                             <span class="badge bg-success-subtle text-success">Debit</span>
                             {{else}}
                             <span class="badge bg-danger-subtle text-danger">Kredit</span>
                             {{end}}
                         </td>
-                        <td class="text-end font-monospace small">Rp {{fmtAmount .Amount}}</td>
+                        <td class="text-end font-monospace small">{{if and (eq .Type "debit") (not .Voided)}}Rp {{fmtAmount .Amount}}{{else}}-{{end}}</td>
+                        <td class="text-end font-monospace small">{{if and (eq .Type "credit") (not .Voided)}}Rp {{fmtAmount .Amount}}{{else}}-{{end}}</td>
+                        <td class="text-end font-monospace small">Rp {{fmtAmount .RunningBalance}}</td>
                         <td>
                             {{$entryID := .ID}}
                             {{$atts := index $.Attachments $entryID}}
@@ -97,18 +126,20 @@
                             <div class="d-flex gap-1 flex-wrap">
                             {{range $atts}}
                                 {{if isImage .MimeType}}
-                                <a href="/attachments/?id={{.ID}}" target="_blank" title="{{.Filename}} ({{fmtSize .Size}})">
-                                    <img src="/attachments/?id={{.ID}}" class="rounded border" style="width:32px;height:32px;object-fit:cover;">
-                                </a>
+                                <a href="/attachments/?id={{.ID}}" target="_blank" title="{{.Filename}}"><img src="/attachments/?id={{.ID}}" class="rounded border" style="width:28px;height:28px;object-fit:cover;"></a>
                                 {{else}}
-                                <a href="/attachments/?id={{.ID}}" target="_blank" class="badge text-bg-light text-decoration-none" title="{{.Filename}}">
-                                    PDF {{fmtSize .Size}}
-                                </a>
+                                <a href="/attachments/?id={{.ID}}" target="_blank" class="badge text-bg-light text-decoration-none">PDF</a>
                                 {{end}}
                             {{end}}
                             </div>
-                            {{else}}
-                            <span class="text-muted small">-</span>
+                            {{else}}<span class="text-muted small">-</span>{{end}}
+                        </td>
+                        <td class="text-nowrap">
+                            {{if $.CanEdit}}
+                            <a href="/books/{{$.Book.ID}}/entries/{{.ID}}/edit" class="btn btn-sm btn-outline-primary">Edit</a>
+                            {{if not .Voided}}
+                            <form method="POST" action="/books/{{$.Book.ID}}/entries/{{.ID}}/void" class="d-inline"><button class="btn btn-sm btn-outline-warning" onclick="return confirm('Void transaksi ini?')">Void</button></form>
+                            {{end}}
                             {{end}}
                         </td>
                     </tr>
@@ -121,56 +152,30 @@
         {{end}}
     </div>
 
-    <!-- Modal: Entri Baru -->
-    {{if .CanEdit}}
-    <div class="modal fade" id="entryModal" tabindex="-1">
+    <!-- Modal Detail -->
+    <div class="modal fade" id="detailModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <form id="entryForm" enctype="multipart/form-data">
-                    <div class="modal-header">
-                        <h6 class="modal-title">Entri Baru</h6>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-                    <div class="modal-body">
-                        <div class="mb-3 form-check">
-                            <input type="checkbox" class="form-check-input" id="useNow" checked onchange="toggleManualDate()">
-                            <label class="form-check-label" for="useNow">Gunakan tanggal saat ini</label>
-                        </div>
-                        <div id="manualDate" style="display:none" class="mb-3">
-                            <label class="form-label">Tanggal &amp; Jam</label>
-                            <input type="datetime-local" class="form-control" id="dateVal" name="date">
-                        </div>
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label">Tipe *</label>
-                                <select name="type" class="form-select" required>
-                                    <option value="debit">Debit (Uang Masuk)</option>
-                                    <option value="credit">Kredit (Uang Keluar)</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Jumlah (Rp) *</label>
-                                <input type="number" name="amount" class="form-control" required min="1" placeholder="100000">
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Deskripsi</label>
-                            <textarea name="description" class="form-control" rows="2" placeholder="Keterangan transaksi"></textarea>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Lampiran <small class="text-muted">(max 5, gambar/PDF)</small></label>
-                            <input type="file" name="files" class="form-control" multiple accept="image/*,application/pdf" capture="environment">
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                        <button type="submit" class="btn btn-primary">Simpan</button>
-                    </div>
-                </form>
+                <div class="modal-header">
+                    <h6 class="modal-title">Detail Transaksi</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4">Tanggal</dt><dd class="col-sm-8" id="d-date"></dd>
+                        <dt class="col-sm-4">No. Bukti</dt><dd class="col-sm-8" id="d-voucher"></dd>
+                        <dt class="col-sm-4">Keterangan</dt><dd class="col-sm-8" id="d-desc"></dd>
+                        <dt class="col-sm-4">Kategori</dt><dd class="col-sm-8" id="d-category"></dd>
+                        <dt class="col-sm-4">Pihak Terkait</dt><dd class="col-sm-8" id="d-party"></dd>
+                        <dt class="col-sm-4">Tipe</dt><dd class="col-sm-8" id="d-type"></dd>
+                        <dt class="col-sm-4">Jumlah</dt><dd class="col-sm-8" id="d-amount"></dd>
+                        <dt class="col-sm-4">Saldo Berjalan</dt><dd class="col-sm-8" id="d-balance"></dd>
+                        <dt class="col-sm-4">Catatan</dt><dd class="col-sm-8" id="d-note"></dd>
+                    </dl>
+                </div>
             </div>
         </div>
     </div>
-    {{end}}
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
@@ -178,20 +183,24 @@
     <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
     <script>
         $(document).ready(function() {
-            $('#entriesTable').DataTable({
+            var table = $('#entriesTable').DataTable({
                 order: [[0, 'desc']],
                 language: { search: 'Cari:', lengthMenu: 'Tampilkan _MENU_', info: 'Menampilkan _START_-_END_ dari _TOTAL_' }
             });
-        });
-        function toggleManualDate() {
-            document.getElementById('manualDate').style.display = document.getElementById('useNow').checked ? 'none' : 'block';
-        }
-        document.getElementById('entryForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            var fd = new FormData(this);
-            fd.set('date_mode', document.getElementById('useNow').checked ? 'auto' : 'manual');
-            fetch('/books/{{.Book.ID}}/entries', { method: 'POST', body: fd })
-                .then(r => { if (r.redirected) window.location.href = r.url; });
+            $('#entriesTable tbody').on('click', 'tr.entry-row', function(e) {
+                if ($(e.target).closest('a,button,form').length) return;
+                var d = this.dataset;
+                document.getElementById('d-date').textContent = d.date;
+                document.getElementById('d-voucher').textContent = d.voucher || '-';
+                document.getElementById('d-desc').textContent = d.desc || '-';
+                document.getElementById('d-category').textContent = d.category || '-';
+                document.getElementById('d-party').textContent = d.party || '-';
+                document.getElementById('d-type').textContent = d.type;
+                document.getElementById('d-amount').textContent = 'Rp ' + Number(d.amount).toLocaleString('id-ID');
+                document.getElementById('d-balance').textContent = 'Rp ' + Number(d.balance).toLocaleString('id-ID');
+                document.getElementById('d-note').textContent = d.note || '-';
+                new bootstrap.Modal(document.getElementById('detailModal')).show();
+            });
         });
     </script>
 </body>

@@ -140,6 +140,11 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, "/login?error="+err.Error(), http.StatusSeeOther)
 			return
 		}
+		// check user status in UserGate
+		if resp.Data.User.Status != "ACTIVE" {
+			http.Redirect(w, r, "/login?error=User+tidak+aktif+di+UserGate", http.StatusSeeOther)
+			return
+		}
 		role := "regular"
 		if resp.Data.User.IsSuperAdmin {
 			role = "super_admin"
@@ -147,6 +152,11 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 		u, err := upsertUserFromGate(db, resp.Data.User.ID, username, role)
 		if err != nil {
 			http.Redirect(w, r, "/login?error=Gagal+menyimpan+user", http.StatusSeeOther)
+			return
+		}
+		// check local active status
+		if !u.Active {
+			http.Redirect(w, r, "/login?error=Akun+dinonaktifkan+secara+lokal", http.StatusSeeOther)
 			return
 		}
 		ugClient.setToken(resp.Data.AccessToken, resp.Data.ExpiresIn)
@@ -169,6 +179,10 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	u, _ := getUserByUsername(db, username)
+	if !u.Active {
+		http.Redirect(w, r, "/login?error=Akun+dinonaktifkan+secara+lokal", http.StatusSeeOther)
+		return
+	}
 	setSession(w, Session{UserID: u.ID, Username: u.Username, Role: u.Role, Expires: time.Now().Add(24 * time.Hour)})
 	http.Redirect(w, r, "/", http.StatusSeeOther)
 }

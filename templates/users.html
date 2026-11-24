@@ -28,7 +28,7 @@
                 <form method="POST" action="/books/{{.Book.ID}}/users/add">
                     <div class="row g-2 align-items-end">
                         <div class="col-md-5"><label for="user_id" class="form-label">User</label><select id="user_id" name="user_id" class="form-select" required><option value="">-- Pilih User --</option>{{range .AllUsers}}<option value="{{.ID}}">{{.Username}} ({{.Role}})</option>{{end}}</select></div>
-                        <div class="col-md-5"><label for="role" class="form-label">Role di Buku</label><select id="role" name="role" class="form-select" required><option value="admin">Admin</option><option value="editor">Editor</option><option value="viewer">Viewer</option></select></div>
+                        <div class="col-md-5"><label for="role" class="form-label">Role di Buku</label><select id="role" name="role" class="form-select" required><option value="editor">Editor</option><option value="viewer">Viewer</option></select></div>
                         <div class="col-md-2"><button type="submit" class="btn btn-primary w-100">Tambah</button></div>
                     </div>
                 </form>
@@ -36,7 +36,7 @@
         </div>
         <h5 class="mb-3">User di Buku Ini</h5>
         {{if .BookUsers}}
-        <div class="table-responsive"><table class="table table-hover align-middle"><thead class="table-light"><tr><th class="small text-muted text-uppercase">Username</th><th class="small text-muted text-uppercase">Role</th><th></th></tr></thead><tbody>{{range .BookUsers}}<tr><td>{{.Username}}</td><td>{{if eq .Role "admin"}}<span class="badge text-bg-warning">Admin</span>{{else if eq .Role "editor"}}<span class="badge text-bg-primary">Editor</span>{{else}}<span class="badge text-bg-secondary">Viewer</span>{{end}}</td><td class="text-end"><form method="POST" action="/books/{{$.Book.ID}}/users/remove" class="d-inline" onsubmit="return confirm('Hapus user ini dari buku?')"><input type="hidden" name="user_id" value="{{.UserID}}"><button class="btn btn-outline-danger btn-sm">Hapus</button></form></td></tr>{{end}}</tbody></table></div>
+        <div class="table-responsive"><table class="table table-hover align-middle"><thead class="table-light"><tr><th class="small text-muted text-uppercase">Username</th><th class="small text-muted text-uppercase">Role</th><th></th></tr></thead><tbody>{{range .BookUsers}}<tr><td>{{.Username}}</td><td>{{if eq .Role "owner"}}<span class="badge text-bg-warning">Owner</span>{{else if eq .Role "editor"}}<span class="badge text-bg-primary">Editor</span>{{else}}<span class="badge text-bg-secondary">Viewer</span>{{end}}</td><td class="text-end"><form method="POST" action="/books/{{$.Book.ID}}/users/remove" class="d-inline" onsubmit="return confirm('Hapus user ini dari buku?')"><input type="hidden" name="user_id" value="{{.UserID}}"><button class="btn btn-outline-danger btn-sm">Hapus</button></form></td></tr>{{end}}</tbody></table></div>
         {{else}}<div class="text-center text-muted py-4">Belum ada user ditambahkan ke buku ini.</div>{{end}}
     </div>
 </body>

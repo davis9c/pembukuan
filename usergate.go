@@ -11,11 +11,11 @@ import (
 )
 
 type UserGateClient struct {
-	BaseURL   string
-	APIKey    string
-	token     string
-	tokenExp  time.Time
-	mu        sync.Mutex
+	BaseURL  string
+	APIKey   string
+	token    string
+	tokenExp time.Time
+	mu       sync.Mutex
 }
 
 type UGLoginResponse struct {
@@ -27,13 +27,13 @@ type UGLoginResponse struct {
 		ExpiresIn    int    `json:"expires_in"`
 		RefreshToken string `json:"refresh_token"`
 		User         struct {
-			ID          string   `json:"id"`
-			Username    string   `json:"username"`
-			Email       string   `json:"email"`
-			FullName    string   `json:"full_name"`
-			Status      string   `json:"status"`
-			Roles       []string `json:"roles"`
-			IsSuperAdmin bool    `json:"is_super_admin"`
+			ID           string   `json:"id"`
+			Username     string   `json:"username"`
+			Email        string   `json:"email"`
+			FullName     string   `json:"full_name"`
+			Status       string   `json:"status"`
+			Roles        []string `json:"roles"`
+			IsSuperAdmin bool     `json:"is_super_admin"`
 		} `json:"user"`
 	} `json:"data"`
 }

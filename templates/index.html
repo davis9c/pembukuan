@@ -22,12 +22,12 @@
     <div class="container mt-4">
         {{if .Success}}<div class="alert alert-info">{{.Success}}</div>{{end}}
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h5 class="mb-0">Buku Pembukuan</h5>
+            <h5 class="mb-0">Buku Saya</h5>
             <a href="/books/new" class="btn btn-primary btn-sm">+ Buku Baru</a>
         </div>
-        {{if .Books}}
-        <div class="row g-3">
-            {{range .Books}}
+        {{if .OwnedBooks}}
+        <div class="row g-3 mb-4">
+            {{range .OwnedBooks}}
             <div class="col-12">
                 <div class="card">
                     <div class="card-body d-flex justify-content-between align-items-center py-2 px-3">
@@ -38,11 +38,6 @@
                         <div class="d-flex align-items-center gap-2">
                             <small class="text-muted">{{fmtTime .CreatedAt}}</small>
                             <a href="/books/{{.ID}}" class="btn btn-outline-primary btn-sm">Buka</a>
-                            {{if $.User.IsSuperAdmin}}
-                            <form method="POST" action="/books/{{.ID}}/delete" class="d-inline" onsubmit="return confirm('Hapus buku ini? Semua data akan hilang.')">
-                                <button class="btn btn-outline-danger btn-sm">Hapus</button>
-                            </form>
-                            {{end}}
                         </div>
                     </div>
                 </div>
@@ -50,7 +45,30 @@
             {{end}}
         </div>
         {{else}}
-        <div class="text-center text-muted py-5">Belum ada buku. Buat buku pertama Anda.</div>
+        <div class="text-center text-muted py-3">Belum ada buku milik Anda.</div>
+        {{end}}
+
+        <h5 class="mb-3">Buku Dibagikan kepada Saya</h5>
+        {{if .SharedBooks}}
+        <div class="row g-3">
+            {{range .SharedBooks}}
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body d-flex justify-content-between align-items-center py-2 px-3">
+                        <div>
+                            <strong>{{.Name}}</strong>
+                            {{if .Description}}<br><small class="text-muted">{{.Description}}</small>{{end}}
+                        </div>
+                        <div class="d-flex align-items-center gap-2">
+                            <a href="/books/{{.ID}}" class="btn btn-outline-primary btn-sm">Buka</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {{end}}
+        </div>
+        {{else}}
+        <div class="text-center text-muted py-3">Tidak ada buku dibagikan.</div>
         {{end}}
     </div>
 </body>

@@ -88,12 +88,16 @@ func main() {
 		}
 		// determine action by suffix
 		if r.Method == "POST" {
-			if hasSuffix(path, "/delete") {
-				deleteBookHandler(w, r)
+			if hasSuffix(path, "/entries") && !hasSuffix(path, "/edit") && !hasSuffix(path, "/void") {
+				addEntryHandler(w, r)
 				return
 			}
-			if hasSuffix(path, "/entries") {
-				addEntryHandler(w, r)
+			if hasSuffix(path, "/edit") {
+				editEntryHandler(w, r)
+				return
+			}
+			if hasSuffix(path, "/void") {
+				voidEntryHandler(w, r)
 				return
 			}
 			if hasSuffix(path, "/users/add") {
@@ -112,14 +116,41 @@ func main() {
 				deleteAttachmentHandler(w, r)
 				return
 			}
+			if hasSuffix(path, "/share") {
+				createShareLinkHandler(w, r)
+				return
+			}
+			if hasSuffix(path, "/share/revoke") {
+				revokeShareLinkHandler(w, r)
+				return
+			}
+			if hasSuffix(path, "/leave") {
+				leaveBookHandler(w, r)
+				return
+			}
 		}
 		if r.Method == "GET" {
 			if hasSuffix(path, "/entries/new") {
 				addEntryPage(w, r)
 				return
 			}
+			if hasSuffix(path, "/entries/edit") {
+				// not a standard suffix; handle via /edit below? fallback viewBook
+			}
+			if hasSuffix(path, "/edit") {
+				editEntryPage(w, r)
+				return
+			}
 			if hasSuffix(path, "/users") {
 				manageUsersPage(w, r)
+				return
+			}
+			if hasSuffix(path, "/share") {
+				sharePage(w, r)
+				return
+			}
+			if hasSuffix(path, "/audit") {
+				auditPage(w, r)
 				return
 			}
 		}
@@ -127,6 +158,7 @@ func main() {
 	}))
 
 	mux.HandleFunc("/attachments/", authMiddleware(serveAttachmentHandler))
+	mux.HandleFunc("/share/", shareAcceptHandler)
 
 	// settings (super_admin only)
 	mux.HandleFunc("/settings", requireSuperAdmin(func(w http.ResponseWriter, r *http.Request) {
@@ -150,6 +182,12 @@ func main() {
 	mux.HandleFunc("/settings/users/delete", requireSuperAdmin(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "POST" {
 			deleteLocalUserHandler(w, r)
+			return
+		}
+	}))
+	mux.HandleFunc("/settings/users/toggle", requireSuperAdmin(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == "POST" {
+			toggleUserActiveHandler(w, r)
 			return
 		}
 	}))

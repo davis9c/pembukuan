@@ -210,3 +210,21 @@ func syncGateUsersHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	http.Redirect(w, r, "/settings?success=Token+UserGate+diperbarui", http.StatusSeeOther)
 }
+
+func toggleUserActiveHandler(w http.ResponseWriter, r *http.Request) {
+	s := getSession(r)
+	userID, _ := strconv.Atoi(r.FormValue("user_id"))
+	if userID == 0 {
+		http.Redirect(w, r, "/settings?error=User+tidak+valid", http.StatusSeeOther)
+		return
+	}
+	if userID == s.UserID {
+		http.Redirect(w, r, "/settings?error=Tidak+bisa+menonaktifkan+diri+sendiri", http.StatusSeeOther)
+		return
+	}
+	if err := toggleUserActive(db, userID); err != nil {
+		http.Redirect(w, r, "/settings?error=Gagal+mengubah+status", http.StatusSeeOther)
+		return
+	}
+	http.Redirect(w, r, "/settings?success=Status+user+berhasil+diubah", http.StatusSeeOther)
+}

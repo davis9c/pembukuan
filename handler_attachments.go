@@ -74,7 +74,7 @@ func uploadAttachmentHandler(w http.ResponseWriter, r *http.Request) {
 			errors = append(errors, fh.Filename+": tipe file tidak didukung")
 			continue
 		}
-		if err := saveAttachment(db, uploadDir, entryID, fh); err != nil {
+		if err := saveAttachment(db, uploadDir, entryID, fh, s.UserID); err != nil {
 			errors = append(errors, fh.Filename+": gagal menyimpan")
 			continue
 		}
@@ -88,7 +88,7 @@ func uploadAttachmentHandler(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, fmt.Sprintf("/books/%d?success=%s", bookID, msg), http.StatusSeeOther)
 }
 
-func saveAttachment(db *sql.DB, dir string, entryID int, fh *multipart.FileHeader) error {
+func saveAttachment(db *sql.DB, dir string, entryID int, fh *multipart.FileHeader, uploadedBy int) error {
 	f, err := fh.Open()
 	if err != nil {
 		return err
@@ -114,7 +114,7 @@ func saveAttachment(db *sql.DB, dir string, entryID int, fh *multipart.FileHeade
 	}
 
 	mimeType := fh.Header.Get("Content-Type")
-	return addAttachment(db, entryID, fh.Filename, storedName, mimeType, written)
+	return addAttachment(db, entryID, fh.Filename, storedName, mimeType, written, uploadedBy)
 }
 
 func serveAttachmentHandler(w http.ResponseWriter, r *http.Request) {
@@ -137,8 +137,16 @@ func serveAttachmentHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// check access via the entry's book
-	// shortcut: allow if logged in (already checked). the id is opaque anyway.
+	entry, err := getEntryByID(db, att.EntryID)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+	if !canAccessBook(s, entry.BookID, false) {
+		http.Error(w, "forbidden", http.StatusForbidden)
+		return
+	}
+
 	path := filepath.Join(uploadDir, att.StoredName)
 	w.Header().Set("Content-Type", att.MimeType)
 	w.Header().Set("Content-Disposition", fmt.Sprintf("inline; filename=\"%s\"", att.Filename))
