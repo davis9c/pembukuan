@@ -23,7 +23,7 @@
         {{if .Success}}<div class="alert alert-info">{{.Success}}</div>{{end}}
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h5 class="mb-0">Buku Saya</h5>
-            <a href="/books/new" class="btn btn-primary btn-sm">+ Buku Baru</a>
+            <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#newBookModal">+ Buku Baru</button>
         </div>
         {{if .OwnedBooks}}
         <div class="row g-3 mb-4">
@@ -37,7 +37,7 @@
                         </div>
                         <div class="d-flex align-items-center gap-2">
                             <small class="text-muted">{{fmtTime .CreatedAt}}</small>
-                            <a href="/books/{{.ID}}" class="btn btn-outline-primary btn-sm">Buka</a>
+                            <a href="/books/{{.Slug}}" class="btn btn-outline-primary btn-sm">Buka</a>
                         </div>
                     </div>
                 </div>
@@ -60,7 +60,7 @@
                             {{if .Description}}<br><small class="text-muted">{{.Description}}</small>{{end}}
                         </div>
                         <div class="d-flex align-items-center gap-2">
-                            <a href="/books/{{.ID}}" class="btn btn-outline-primary btn-sm">Buka</a>
+                            <a href="/books/{{.Slug}}" class="btn btn-outline-primary btn-sm">Buka</a>
                         </div>
                     </div>
                 </div>
@@ -71,5 +71,27 @@
         <div class="text-center text-muted py-3">Tidak ada buku dibagikan.</div>
         {{end}}
     </div>
+    <!-- Modal Buku Baru -->
+    <div class="modal fade" id="newBookModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h6 class="modal-title">Buat Buku Baru</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+    <div id="newBookError" class="alert alert-danger py-2" style="display:none"></div>
+    <form id="newBookForm">
+    <div class="mb-3"><label class="form-label">Nama Buku *</label><input type="text" name="name" class="form-control" required></div>
+    <div class="mb-3"><label class="form-label">Deskripsi</label><textarea name="description" class="form-control" rows="3"></textarea></div>
+    <div class="mb-3"><label class="form-label">Saldo Awal (Rp)</label><input type="number" name="opening_balance" class="form-control" value="0"></div>
+    <div class="d-flex justify-content-end gap-2"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button><button type="submit" class="btn btn-primary">Simpan</button></div>
+    </form></div></div></div></div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    document.getElementById('newBookForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        var fd = new FormData(this);
+        fetch('/books/new?ajax=1', {method:'POST', body: fd, redirect:'manual'}).then(function(resp) {
+            if (resp.status === 0 || resp.status === 303) { location.reload(); return; }
+            return resp.text().then(function(t) { document.getElementById('newBookError').textContent = t; document.getElementById('newBookError').style.display = ''; });
+        }).catch(function(err) { document.getElementById('newBookError').textContent = 'Gagal terhubung'; document.getElementById('newBookError').style.display = ''; });
+    });
+    </script>
 </body>
 </html>

@@ -28,28 +28,41 @@ func generateToken() (string, error) {
 
 func sharePage(w http.ResponseWriter, r *http.Request) {
 	s := getSession(r)
-	bookID := getBookID(r.URL.Path)
+	book, bookID := resolveBook(r.URL.Path)
+	if book == nil {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
 	canManage := s.Role == "super_admin"
 	if !canManage {
 		role, _ := getUserBookRole(db, s.UserID, bookID)
 		canManage = role == "owner" || role == "admin"
 	}
 	if !canManage {
-		http.Redirect(w, r, "/books/"+strconv.Itoa(bookID), http.StatusSeeOther)
+		http.Redirect(w, r, "/books/"+book.Slug, http.StatusSeeOther)
 		return
 	}
-	book, _ := getBook(db, bookID)
 	links, _ := getShareLinks(db, bookID)
-	tmpl.ExecuteTemplate(w, "share.html", PageData{
+	pd := PageData{
 		"Book":  book,
 		"Links": links,
 		"Now":   time.Now(),
-	}.WithUser(s))
+	}.WithUser(s)
+
+	if r.URL.Query().Get("fragment") == "1" {
+		tmpl.ExecuteTemplate(w, "share_fragment.html", pd)
+		return
+	}
+	tmpl.ExecuteTemplate(w, "share.html", pd)
 }
 
 func createShareLinkHandler(w http.ResponseWriter, r *http.Request) {
 	s := getSession(r)
-	bookID := getBookID(r.URL.Path)
+	book, bookID := resolveBook(r.URL.Path)
+	if book == nil {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
 	canManage := s.Role == "super_admin"
 	if !canManage {
 		role, _ := getUserBookRole(db, s.UserID, bookID)
@@ -83,7 +96,11 @@ func createShareLinkHandler(w http.ResponseWriter, r *http.Request) {
 
 	tok, err := generateToken()
 	if err != nil {
-		http.Redirect(w, r, "/books/"+strconv.Itoa(bookID)+"/share?error=Gagal+membuat+token", http.StatusSeeOther)
+		redir := "/books/" + book.Slug + "/share?error=Gagal+membuat+token"
+		if r.URL.Query().Get("fragment") == "1" {
+			redir += "&fragment=1"
+		}
+		http.Redirect(w, r, redir, http.StatusSeeOther)
 		return
 	}
 	hash := hashToken(tok)
@@ -91,8 +108,16 @@ func createShareLinkHandler(w http.ResponseWriter, r *http.Request) {
 	createShareLink(db, bookID, hash, permission, expires, s.UserID)
 	insertAuditLog(db, s.UserID, bookID, "share_link", 0, "create_share_link", "", permission, r.RemoteAddr)
 
-	// show token once
+	frag := r.URL.Query().Get("fragment") == "1"
 	linkURL := fmt.Sprintf("/share/%s", tok)
+	if frag {
+		// return the created link info as HTML snippet
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		fmt.Fprintf(w, `<div class="alert alert-success py-2">Link dibuat!</div>
+<div class="input-group mb-2"><input type="text" class="form-control" value="%s" readonly id="newLinkVal"><button class="btn btn-outline-secondary" onclick="navigator.clipboard.writeText('%s')">Salin</button></div>
+<small class="text-muted">Kedaluwarsa: %s. Akses: %s.</small>`, linkURL, linkURL, expires.Format("02 Jan 2006 15:04"), permission)
+		return
+	}
 	tmpl.ExecuteTemplate(w, "share_created.html", PageData{
 		"BookID":     bookID,
 		"Token":      tok,
@@ -104,7 +129,11 @@ func createShareLinkHandler(w http.ResponseWriter, r *http.Request) {
 
 func revokeShareLinkHandler(w http.ResponseWriter, r *http.Request) {
 	s := getSession(r)
-	bookID := getBookID(r.URL.Path)
+	book, bookID := resolveBook(r.URL.Path)
+	if book == nil {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
 	canManage := s.Role == "super_admin"
 	if !canManage {
 		role, _ := getUserBookRole(db, s.UserID, bookID)
@@ -118,7 +147,11 @@ func revokeShareLinkHandler(w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.Atoi(idStr)
 	revokeShareLink(db, id)
 	insertAuditLog(db, s.UserID, bookID, "share_link", id, "revoke_share_link", "", "", r.RemoteAddr)
-	http.Redirect(w, r, "/books/"+strconv.Itoa(bookID)+"/share", http.StatusSeeOther)
+	redir := "/books/" + book.Slug + "/share"
+	if r.URL.Query().Get("fragment") == "1" {
+		redir += "?fragment=1"
+	}
+	http.Redirect(w, r, redir, http.StatusSeeOther)
 }
 
 // public share accept
@@ -160,7 +193,7 @@ func shareAcceptHandler(w http.ResponseWriter, r *http.Request) {
 			addUserToBook(db, book.ID, s.UserID, role)
 			insertAuditLog(db, s.UserID, book.ID, "membership", s.UserID, "accept_share", "", role, r.RemoteAddr)
 		}
-		http.Redirect(w, r, "/books/"+strconv.Itoa(book.ID), http.StatusSeeOther)
+		http.Redirect(w, r, "/books/"+book.Slug, http.StatusSeeOther)
 		return
 	}
 
@@ -211,7 +244,11 @@ func shareAcceptHandler(w http.ResponseWriter, r *http.Request) {
 
 func voidEntryHandler(w http.ResponseWriter, r *http.Request) {
 	s := getSession(r)
-	bookID := getBookID(r.URL.Path)
+	book, bookID := resolveBook(r.URL.Path)
+	if book == nil {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
 	entryID := getEntryID(r.URL.Path)
 	canEdit := s.Role == "super_admin"
 	if !canEdit {
@@ -229,7 +266,7 @@ func voidEntryHandler(w http.ResponseWriter, r *http.Request) {
 	newJSON, _ := json.Marshal(newEntry)
 	addRevision(db, entryID, s.UserID, string(oldJSON), string(newJSON))
 	insertAuditLog(db, s.UserID, bookID, "entry", entryID, "void_entry", string(oldJSON), string(newJSON), r.RemoteAddr)
-	http.Redirect(w, r, "/books/"+strconv.Itoa(bookID)+"?success=Entri+di-void", http.StatusSeeOther)
+	http.Redirect(w, r, "/books/"+book.Slug+"?success=Entri+di-void", http.StatusSeeOther)
 }
 
 func leaveBookHandler(w http.ResponseWriter, r *http.Request) {
@@ -238,11 +275,14 @@ func leaveBookHandler(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/login", http.StatusSeeOther)
 		return
 	}
-	bookID := getBookID(r.URL.Path)
+	book, bookID := resolveBook(r.URL.Path)
+	if book == nil {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
 	// cannot leave if owner
-	book, _ := getBook(db, bookID)
 	if book.OwnerID == s.UserID {
-		http.Redirect(w, r, "/books/"+strconv.Itoa(bookID)+"?error=Pemilik+tidak+bisa+keluar", http.StatusSeeOther)
+		http.Redirect(w, r, "/books/"+book.Slug+"?error=Pemilik+tidak+bisa+keluar", http.StatusSeeOther)
 		return
 	}
 	removeUserFromBook(db, bookID, s.UserID)
@@ -252,20 +292,29 @@ func leaveBookHandler(w http.ResponseWriter, r *http.Request) {
 
 func auditPage(w http.ResponseWriter, r *http.Request) {
 	s := getSession(r)
-	bookID := getBookID(r.URL.Path)
+	book, bookID := resolveBook(r.URL.Path)
+	if book == nil {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
 	canView := s.Role == "super_admin"
 	if !canView {
 		role, _ := getUserBookRole(db, s.UserID, bookID)
 		canView = role == "owner" || role == "admin"
 	}
 	if !canView {
-		http.Redirect(w, r, "/books/"+strconv.Itoa(bookID), http.StatusSeeOther)
+		http.Redirect(w, r, "/books/"+book.Slug, http.StatusSeeOther)
 		return
 	}
-	book, _ := getBook(db, bookID)
 	logs, _ := getAuditLogs(db, bookID, 200)
-	tmpl.ExecuteTemplate(w, "audit.html", PageData{
+	pd := PageData{
 		"Book": book,
 		"Logs": logs,
-	}.WithUser(s))
+	}.WithUser(s)
+
+	if r.URL.Query().Get("fragment") == "1" {
+		tmpl.ExecuteTemplate(w, "audit_fragment.html", pd)
+		return
+	}
+	tmpl.ExecuteTemplate(w, "audit.html", pd)
 }

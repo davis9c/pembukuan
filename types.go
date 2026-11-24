@@ -11,6 +11,7 @@ type User struct {
 
 type Book struct {
 	ID             int
+	Slug           string
 	Name           string
 	Description    string
 	OwnerID        int

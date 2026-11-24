@@ -1,7 +1,9 @@
 package main
 
 import (
+	"crypto/rand"
 	"database/sql"
+	"encoding/hex"
 	"fmt"
 	"time"
 
@@ -103,24 +105,39 @@ func deleteUserByID(db *sql.DB, userID int) error {
 // ---------- book queries ----------
 
 func createBook(db *sql.DB, name, desc string, ownerID int, openingBalance int64) (int64, error) {
-	r, err := db.Exec("INSERT INTO books (name, description, owner_id, opening_balance) VALUES (?, ?, ?, ?)", name, desc, ownerID, openingBalance)
+	slug := generateSlug()
+	// ensure uniktif there is a collision (very rare)
+	for {
+		var exists int
+		db.QueryRow("SELECT COUNT(*) FROM books WHERE slug = ?", slug).Scan(&exists)
+		if exists == 0 {
+			break
+		}
+		slug = generateSlug()
+	}
+	r, err := db.Exec("INSERT INTO books (name, description, owner_id, opening_balance, slug) VALUES (?, ?, ?, ?, ?)", name, desc, ownerID, openingBalance, slug)
 	if err != nil {
 		return 0, err
 	}
 	id, _ := r.LastInsertId()
-	// owner becomes book owner member
 	addUserToBook(db, int(id), ownerID, "owner")
 	return id, nil
+}
+
+func generateSlug() string {
+	b := make([]byte, 6)
+	rand.Read(b)
+	return hex.EncodeToString(b) // 12 chars
 }
 
 func getBooksForUser(db *sql.DB, userID int, isSuperAdmin bool) ([]Book, error) {
 	var rows *sql.Rows
 	var err error
 	if isSuperAdmin {
-		rows, err = db.Query("SELECT id, name, description, owner_id, status, opening_balance, currency, created_at FROM books ORDER BY name")
+		rows, err = db.Query("SELECT id, slug, name, description, owner_id, status, opening_balance, currency, created_at FROM books ORDER BY name")
 	} else {
 		rows, err = db.Query(`
-			SELECT b.id, b.name, b.description, b.owner_id, b.status, b.opening_balance, b.currency, b.created_at
+			SELECT b.id, b.slug, b.name, b.description, b.owner_id, b.status, b.opening_balance, b.currency, b.created_at
 			FROM books b
 			JOIN book_users bu ON b.id = bu.book_id
 			WHERE bu.user_id = ? AND bu.status = 'active' AND b.status = 'active'
@@ -137,10 +154,14 @@ func scanBooks(rows *sql.Rows) ([]Book, error) {
 	var books []Book
 	for rows.Next() {
 		var b Book
+		var slug sql.NullString
 		var owner sql.NullInt64
 		var status sql.NullString
 		var currency sql.NullString
-		rows.Scan(&b.ID, &b.Name, &b.Description, &owner, &status, &b.OpeningBalance, &currency, &b.CreatedAt)
+		rows.Scan(&b.ID, &slug, &b.Name, &b.Description, &owner, &status, &b.OpeningBalance, &currency, &b.CreatedAt)
+		if slug.Valid {
+			b.Slug = slug.String
+		}
 		if owner.Valid {
 			b.OwnerID = int(owner.Int64)
 		}
@@ -161,13 +182,17 @@ func scanBooks(rows *sql.Rows) ([]Book, error) {
 
 func getBook(db *sql.DB, bookID int) (*Book, error) {
 	b := &Book{}
+	var slug sql.NullString
 	var owner sql.NullInt64
 	var status sql.NullString
 	var currency sql.NullString
-	err := db.QueryRow("SELECT id, name, description, owner_id, status, opening_balance, currency, created_at FROM books WHERE id = ?", bookID).
-		Scan(&b.ID, &b.Name, &b.Description, &owner, &status, &b.OpeningBalance, &currency, &b.CreatedAt)
+	err := db.QueryRow("SELECT id, slug, name, description, owner_id, status, opening_balance, currency, created_at FROM books WHERE id = ?", bookID).
+		Scan(&b.ID, &slug, &b.Name, &b.Description, &owner, &status, &b.OpeningBalance, &currency, &b.CreatedAt)
 	if err != nil {
 		return nil, err
+	}
+	if slug.Valid {
+		b.Slug = slug.String
 	}
 	if owner.Valid {
 		b.OwnerID = int(owner.Int64)
@@ -183,6 +208,15 @@ func getBook(db *sql.DB, bookID int) (*Book, error) {
 		b.Currency = "IDR"
 	}
 	return b, nil
+}
+
+func getBookBySlug(db *sql.DB, slug string) (*Book, error) {
+	var id int
+	err := db.QueryRow("SELECT id FROM books WHERE slug = ?", slug).Scan(&id)
+	if err != nil {
+		return nil, err
+	}
+	return getBook(db, id)
 }
 
 // archive instead of delete

@@ -30,7 +30,7 @@ func uploadAttachmentHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// check access to the entry's book
-	bookID := getBookID(r.URL.Path)
+	bookID := resolveBookID(r.URL.Path)
 	if !canAccessBook(s, bookID, true) {
 		http.Error(w, "forbidden", http.StatusForbidden)
 		return
@@ -167,7 +167,7 @@ func deleteAttachmentHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	bookID := getBookID(r.URL.Path)
+	bookID := resolveBookID(r.URL.Path)
 	if !canAccessBook(s, bookID, true) {
 		http.Error(w, "forbidden", http.StatusForbidden)
 		return

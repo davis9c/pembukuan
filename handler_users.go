@@ -9,7 +9,11 @@ import (
 
 func manageUsersPage(w http.ResponseWriter, r *http.Request) {
 	s := getSession(r)
-	bookID := getBookID(r.URL.Path)
+	book, bookID := resolveBook(r.URL.Path)
+	if book == nil {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
 
 	canManage := s.Role == "super_admin"
 	if !canManage {
@@ -19,34 +23,31 @@ func manageUsersPage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if !canManage {
-		http.Redirect(w, r, "/books/"+strconv.Itoa(bookID), http.StatusSeeOther)
+		http.Redirect(w, r, "/books/"+book.Slug, http.StatusSeeOther)
 		return
 	}
 
-	book, err := getBook(db, bookID)
-	if err != nil {
-		http.Redirect(w, r, "/", http.StatusSeeOther)
-		return
-	}
-
-	allUsers, _ := getAllUsers(db)
 	bookUsers, _ := getBookUsers(db, bookID)
-
 	success := r.URL.Query().Get("success")
 	errMsg := r.URL.Query().Get("error")
 
-	tmpl.ExecuteTemplate(w, "users.html", PageData{
+	pd := PageData{
 		"Book":      book,
-		"AllUsers":  allUsers,
 		"BookUsers": bookUsers,
 		"Success":   success,
 		"Error":     errMsg,
-	}.WithUser(s))
+	}.WithUser(s)
+
+	if r.URL.Query().Get("fragment") == "1" {
+		tmpl.ExecuteTemplate(w, "users_fragment.html", pd)
+		return
+	}
+	tmpl.ExecuteTemplate(w, "users.html", pd)
 }
 
 func addUserToBookHandler(w http.ResponseWriter, r *http.Request) {
 	s := getSession(r)
-	bookID := getBookID(r.URL.Path)
+	bookID := resolveBookID(r.URL.Path)
 
 	canManage := s.Role == "super_admin"
 	if !canManage {
@@ -76,7 +77,11 @@ func addUserToBookHandler(w http.ResponseWriter, r *http.Request) {
 
 func removeUserFromBookHandler(w http.ResponseWriter, r *http.Request) {
 	s := getSession(r)
-	bookID := getBookID(r.URL.Path)
+	book, bookID := resolveBook(r.URL.Path)
+	if book == nil {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
 
 	canManage := s.Role == "super_admin"
 	if !canManage {
@@ -92,10 +97,14 @@ func removeUserFromBookHandler(w http.ResponseWriter, r *http.Request) {
 
 	userID, _ := strconv.Atoi(r.FormValue("user_id"))
 	if userID == 0 {
-		http.Redirect(w, r, "/books/"+strconv.Itoa(bookID)+"/users?error=User+tidak+valid", http.StatusSeeOther)
+		http.Redirect(w, r, "/books/"+book.Slug+"/users?error=User+tidak+valid", http.StatusSeeOther)
 		return
 	}
 
 	removeUserFromBook(db, bookID, userID)
-	http.Redirect(w, r, "/books/"+strconv.Itoa(bookID)+"/users?success=User+berhasil+dihapus", http.StatusSeeOther)
+	redir := "/books/" + book.Slug + "/users?success=User+berhasil+dihapus"
+	if r.URL.Query().Get("fragment") == "1" {
+		redir += "&fragment=1"
+	}
+	http.Redirect(w, r, redir, http.StatusSeeOther)
 }

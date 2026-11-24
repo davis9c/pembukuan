@@ -1,0 +1,5 @@
+{{if .Logs}}
+<table id="auditTable" class="table table-sm"><thead><tr><th>Waktu</th><th>Aktor</th><th>Aksi</th><th>Entity</th></tr></thead><tbody>
+{{range .Logs}}<tr><td class="small">{{fmtTime .CreatedAt}}</td><td>{{.ActorID}}</td><td>{{.Action}}</td><td>{{.EntityType}} #{{.EntityID}}</td></tr>{{end}}
+</tbody></table>
+{{else}}<p class="text-muted">Belum ada audit.</p>{{end}}

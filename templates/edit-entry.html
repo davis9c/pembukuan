@@ -4,8 +4,8 @@
 <body>
 <nav class="navbar navbar-expand navbar-dark bg-primary"><div class="container-fluid"><a class="navbar-brand" href="/"><strong>Pembukuan</strong></a><ul class="navbar-nav ms-auto"><li class="nav-item"><a class="nav-link small" href="/logout">Keluar</a></li></ul></div></nav>
 <div class="container mt-4" style="max-width:700px;">
-<nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="/">Dashboard</a></li><li class="breadcrumb-item"><a href="/books/{{.Book.ID}}">{{.Book.Name}}</a></li><li class="breadcrumb-item active">Edit Entri</li></ol></nav>
-<form method="POST" action="/books/{{.Book.ID}}/entries/{{.Entry.ID}}/edit" enctype="multipart/form-data">
+<nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="/">Dashboard</a></li><li class="breadcrumb-item"><a href="/books/{{.Book.Slug}}">{{.Book.Name}}</a></li><li class="breadcrumb-item active">Edit Entri</li></ol></nav>
+<form method="POST" action="/books/{{.Book.Slug}}/entries/{{.Entry.ID}}/edit" enctype="multipart/form-data">
 <div class="mb-3"><label class="form-label">Tanggal &amp; Jam</label><input type="datetime-local" name="date" class="form-control" value="{{.Entry.Date}}"></div>
 <div class="row g-3 mb-3">
 <div class="col-md-6"><label class="form-label">Tipe *</label><select name="type" class="form-select"><option value="debit" {{if eq .Entry.Type "debit"}}selected{{end}}>Debit (Uang Masuk)</option><option value="credit" {{if eq .Entry.Type "credit"}}selected{{end}}>Kredit (Uang Keluar)</option></select></div>
@@ -17,7 +17,7 @@
 <div class="mb-3"><label class="form-label">Keterangan</label><textarea name="description" class="form-control" rows="2">{{.Entry.Description}}</textarea></div>
 <div class="mb-3"><label class="form-label">Catatan Internal</label><textarea name="note" class="form-control" rows="2">{{.Entry.Note}}</textarea></div>
 <div class="mb-3"><label class="form-label">Tambah Lampiran</label><input type="file" name="files" class="form-control" multiple accept="image/*,application/pdf"></div>
-<div class="d-flex justify-content-end gap-2"><a href="/books/{{.Book.ID}}" class="btn btn-secondary">Batal</a><button type="submit" class="btn btn-primary">Simpan</button></div>
+<div class="d-flex justify-content-end gap-2"><a href="/books/{{.Book.Slug}}" class="btn btn-secondary">Batal</a><button type="submit" class="btn btn-primary">Simpan</button></div>
 </form>
 </div>
 </body></html>

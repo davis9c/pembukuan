@@ -43,8 +43,13 @@ func createBookPage(w http.ResponseWriter, r *http.Request) {
 
 func createBookHandler(w http.ResponseWriter, r *http.Request) {
 	s := getSession(r)
+	ajax := r.URL.Query().Get("ajax") == "1"
 	name := strings.TrimSpace(r.FormValue("name"))
 	if name == "" {
+		if ajax {
+			http.Error(w, "Nama buku wajib diisi", http.StatusBadRequest)
+			return
+		}
 		redirectError(w, r, "/books/new", "Nama+buku+wajib+diisi")
 		return
 	}
@@ -59,17 +64,26 @@ func createBookHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	id, err := createBook(db, name, desc, s.UserID, opening)
 	if err != nil {
+		if ajax {
+			http.Error(w, "Gagal membuat buku", http.StatusInternalServerError)
+			return
+		}
 		redirectError(w, r, "/books/new", "Gagal+membuat+buku")
 		return
 	}
+	book, _ := getBook(db, int(id))
 	insertAuditLog(db, s.UserID, int(id), "book", int(id), "create_book", "", name, r.RemoteAddr)
-	http.Redirect(w, r, "/books/"+strconv.FormatInt(id, 10), http.StatusSeeOther)
+	if ajax {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
+	http.Redirect(w, r, "/books/"+book.Slug, http.StatusSeeOther)
 }
 
 func viewBook(w http.ResponseWriter, r *http.Request) {
 	s := getSession(r)
-	bookID := getBookID(r.URL.Path)
-	if bookID == 0 {
+	book, bookID := resolveBook(r.URL.Path)
+	if book == nil {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
@@ -95,11 +109,6 @@ func viewBook(w http.ResponseWriter, r *http.Request) {
 		insertAuditLog(db, s.UserID, bookID, "book", bookID, "admin_view_book", "", "", r.RemoteAddr)
 	}
 
-	book, err := getBook(db, bookID)
-	if err != nil {
-		http.Redirect(w, r, "/", http.StatusSeeOther)
-		return
-	}
 	entries, _ := getEntries(db, bookID)
 
 	// running balance
@@ -145,7 +154,11 @@ func viewBook(w http.ResponseWriter, r *http.Request) {
 
 func addEntryPage(w http.ResponseWriter, r *http.Request) {
 	s := getSession(r)
-	bookID := getBookID(r.URL.Path)
+	book, bookID := resolveBook(r.URL.Path)
+	if book == nil {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
 
 	canEdit := s.Role == "super_admin"
 	if !canEdit {
@@ -155,15 +168,10 @@ func addEntryPage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if !canEdit {
-		http.Redirect(w, r, "/books/"+strconv.Itoa(bookID), http.StatusSeeOther)
+		http.Redirect(w, r, "/books/"+book.Slug, http.StatusSeeOther)
 		return
 	}
 
-	book, err := getBook(db, bookID)
-	if err != nil {
-		http.Redirect(w, r, "/", http.StatusSeeOther)
-		return
-	}
 	errMsg := r.URL.Query().Get("error")
 	tmpl.ExecuteTemplate(w, "add-entry.html", PageData{
 		"Book":  book,
@@ -173,7 +181,11 @@ func addEntryPage(w http.ResponseWriter, r *http.Request) {
 
 func addEntryHandler(w http.ResponseWriter, r *http.Request) {
 	s := getSession(r)
-	bookID := getBookID(r.URL.Path)
+	book, bookID := resolveBook(r.URL.Path)
+	if book == nil {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
 
 	canEdit := s.Role == "super_admin"
 	if !canEdit {
@@ -189,7 +201,7 @@ func addEntryHandler(w http.ResponseWriter, r *http.Request) {
 
 	r.Body = http.MaxBytesReader(w, r.Body, 50<<20)
 	if err := r.ParseMultipartForm(50 << 20); err != nil {
-		redirectError(w, r, "/books/"+strconv.Itoa(bookID)+"/entries/new", "File+terlalu+besar")
+		redirectError(w, r, "/books/"+book.Slug+"/entries/new", "File+terlalu+besar")
 		return
 	}
 
@@ -218,13 +230,13 @@ func addEntryHandler(w http.ResponseWriter, r *http.Request) {
 	amountStr := r.FormValue("amount")
 	amount, err := strconv.ParseInt(amountStr, 10, 64)
 	if err != nil || amount <= 0 {
-		redirectError(w, r, "/books/"+strconv.Itoa(bookID)+"/entries/new", "Jumlah+harus+angka+positif")
+		redirectError(w, r, "/books/"+book.Slug+"/entries/new", "Jumlah+harus+angka+positif")
 		return
 	}
 
 	entryID, err := addEntry(db, bookID, s.UserID, date, voucherNo, desc, etype, category, party, note, amount)
 	if err != nil {
-		redirectError(w, r, "/books/"+strconv.Itoa(bookID)+"/entries/new", "Gagal+menambah+entri")
+		redirectError(w, r, "/books/"+book.Slug+"/entries/new", "Gagal+menambah+entri")
 		return
 	}
 
@@ -257,17 +269,20 @@ func addEntryHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	http.Redirect(w, r, "/books/"+strconv.Itoa(bookID)+"?success=Entri+berhasil+ditambah", http.StatusSeeOther)
+	http.Redirect(w, r, "/books/"+book.Slug+"?success=Entri+berhasil+ditambah", http.StatusSeeOther)
 }
 
 // edit entry
 func editEntryPage(w http.ResponseWriter, r *http.Request) {
-	// route handled via query ?edit=id on book page? We'll provide /books/{id}/entries/{eid}/edit
 	s := getSession(r)
-	bookID := getBookID(r.URL.Path)
+	book, bookID := resolveBook(r.URL.Path)
+	if book == nil {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
 	entryID := getEntryID(r.URL.Path)
 	if entryID == 0 {
-		http.Redirect(w, r, "/books/"+strconv.Itoa(bookID), http.StatusSeeOther)
+		http.Redirect(w, r, "/books/"+book.Slug, http.StatusSeeOther)
 		return
 	}
 	canEdit := s.Role == "super_admin"
@@ -276,15 +291,14 @@ func editEntryPage(w http.ResponseWriter, r *http.Request) {
 		canEdit = role == "owner" || role == "admin" || role == "editor"
 	}
 	if !canEdit {
-		http.Redirect(w, r, "/books/"+strconv.Itoa(bookID), http.StatusSeeOther)
+		http.Redirect(w, r, "/books/"+book.Slug, http.StatusSeeOther)
 		return
 	}
 	entry, err := getEntryByID(db, entryID)
 	if err != nil {
-		http.Redirect(w, r, "/books/"+strconv.Itoa(bookID), http.StatusSeeOther)
+		http.Redirect(w, r, "/books/"+book.Slug, http.StatusSeeOther)
 		return
 	}
-	book, _ := getBook(db, bookID)
 	tmpl.ExecuteTemplate(w, "edit-entry.html", PageData{
 		"Book":  book,
 		"Entry": entry,
@@ -293,10 +307,14 @@ func editEntryPage(w http.ResponseWriter, r *http.Request) {
 
 func editEntryHandler(w http.ResponseWriter, r *http.Request) {
 	s := getSession(r)
-	bookID := getBookID(r.URL.Path)
+	book, bookID := resolveBook(r.URL.Path)
+	if book == nil {
+		http.Redirect(w, r, "/", http.StatusSeeOther)
+		return
+	}
 	entryID := getEntryID(r.URL.Path)
 	if entryID == 0 {
-		http.Redirect(w, r, "/books/"+strconv.Itoa(bookID), http.StatusSeeOther)
+		http.Redirect(w, r, "/books/"+book.Slug, http.StatusSeeOther)
 		return
 	}
 	canEdit := s.Role == "super_admin"
@@ -311,7 +329,7 @@ func editEntryHandler(w http.ResponseWriter, r *http.Request) {
 
 	r.Body = http.MaxBytesReader(w, r.Body, 50<<20)
 	if err := r.ParseMultipartForm(50 << 20); err != nil {
-		redirectError(w, r, "/books/"+strconv.Itoa(bookID), "File+terlalu+besar")
+		redirectError(w, r, "/books/"+book.Slug, "File+terlalu+besar")
 		return
 	}
 
@@ -373,5 +391,5 @@ func editEntryHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	http.Redirect(w, r, "/books/"+strconv.Itoa(bookID)+"?success=Entri+berhasil+diubah", http.StatusSeeOther)
+	http.Redirect(w, r, "/books/"+book.Slug+"?success=Entri+berhasil+diubah", http.StatusSeeOther)
 }

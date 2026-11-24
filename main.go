@@ -100,10 +100,6 @@ func main() {
 				voidEntryHandler(w, r)
 				return
 			}
-			if hasSuffix(path, "/users/add") {
-				addUserToBookHandler(w, r)
-				return
-			}
 			if hasSuffix(path, "/users/remove") {
 				removeUserFromBookHandler(w, r)
 				return

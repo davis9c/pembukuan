@@ -4,13 +4,13 @@
 <body>
 <nav class="navbar navbar-expand navbar-dark bg-primary"><div class="container-fluid"><a class="navbar-brand" href="/"><strong>Pembukuan</strong></a><ul class="navbar-nav ms-auto"><li class="nav-item"><a class="nav-link small" href="/logout">Keluar</a></li></ul></div></nav>
 <div class="container mt-4">
-<nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="/">Dashboard</a></li><li class="breadcrumb-item"><a href="/books/{{.Book.ID}}">{{.Book.Name}}</a></li><li class="breadcrumb-item active">Audit</li></ol></nav>
+<nav aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="/">Dashboard</a></li><li class="breadcrumb-item"><a href="/books/{{.Book.Slug}}">{{.Book.Name}}</a></li><li class="breadcrumb-item active">Audit</li></ol></nav>
 <h5>Riwayat Aktivitas</h5>
 {{if .Logs}}
 <table class="table table-sm"><thead><tr><th>Waktu</th><th>Aktor</th><th>Aksi</th><th>Entity</th></tr></thead><tbody>
 {{range .Logs}}<tr><td class="small">{{fmtTime .CreatedAt}}</td><td>{{.ActorID}}</td><td>{{.Action}}</td><td>{{.EntityType}} #{{.EntityID}}</td></tr>{{end}}
 </tbody></table>
 {{else}}<p class="text-muted">Belum ada audit.</p>{{end}}
-<a href="/books/{{.Book.ID}}" class="btn btn-secondary btn-sm">Kembali</a>
+<a href="/books/{{.Book.Slug}}" class="btn btn-secondary btn-sm">Kembali</a>
 </div>
 </body></html>

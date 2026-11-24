@@ -30,15 +30,15 @@
             </div>
             <div class="d-flex gap-2">
                 {{if .CanEdit}}
-                <a href="/books/{{.Book.ID}}/entries/new" class="btn btn-primary btn-sm">+ Entri Baru</a>
+                <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#entryModal">+ Entri Baru</button>
                 {{end}}
                 {{if .CanManage}}
-                <a href="/books/{{.Book.ID}}/users" class="btn btn-outline-primary btn-sm">Kelola User</a>
-                <a href="/books/{{.Book.ID}}/share" class="btn btn-outline-primary btn-sm">Bagikan</a>
+                <button class="btn btn-outline-primary btn-sm" onclick="loadFragment('/books/{{.Book.Slug}}/users?fragment=1','usersBody','usersModal')">Kelola User</button>
+                <button class="btn btn-outline-primary btn-sm" onclick="loadFragment('/books/{{.Book.Slug}}/share?fragment=1','shareBody','shareModal')">Bagikan</button>
                 {{end}}
-                <a href="/books/{{.Book.ID}}/audit" class="btn btn-outline-secondary btn-sm">Audit</a>
+                <button class="btn btn-outline-secondary btn-sm" onclick="loadFragment('/books/{{.Book.Slug}}/audit?fragment=1','auditBody','auditModal')">Audit</button>
                 {{if and (not .CanManage) (not .Guest)}}
-                <form method="POST" action="/books/{{.Book.ID}}/leave" class="d-inline"><button class="btn btn-outline-danger btn-sm">Keluar</button></form>
+                <form method="POST" action="/books/{{.Book.Slug}}/leave" class="d-inline"><button class="btn btn-outline-danger btn-sm">Keluar</button></form>
                 {{end}}
             </div>
         </div>
@@ -136,9 +136,9 @@
                         </td>
                         <td class="text-nowrap">
                             {{if $.CanEdit}}
-                            <a href="/books/{{$.Book.ID}}/entries/{{.ID}}/edit" class="btn btn-sm btn-outline-primary">Edit</a>
+                            <button class="btn btn-sm btn-outline-primary edit-entry-btn" data-id="{{.ID}}" data-date="{{fmtDate .Date}}" data-voucher="{{.VoucherNo}}" data-desc="{{.Description}}" data-category="{{.Category}}" data-party="{{.Party}}" data-type="{{.Type}}" data-amount="{{.Amount}}" data-note="{{.Note}}">Edit</button>
                             {{if not .Voided}}
-                            <form method="POST" action="/books/{{$.Book.ID}}/entries/{{.ID}}/void" class="d-inline"><button class="btn btn-sm btn-outline-warning" onclick="return confirm('Void transaksi ini?')">Void</button></form>
+                            <form method="POST" action="/books/{{$.Book.Slug}}/entries/{{.ID}}/void" class="d-inline" onsubmit="return confirm('Void transaksi ini?')"><button class="btn btn-sm btn-outline-warning">Void</button></form>
                             {{end}}
                             {{end}}
                         </td>
@@ -177,13 +177,68 @@
         </div>
     </div>
 
+    <!-- Modal Entri Baru -->
+    <div class="modal fade" id="entryModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h6 class="modal-title">Entri Baru</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+    <div id="entryError" class="alert alert-danger py-2" style="display:none"></div>
+    <form id="entryForm" enctype="multipart/form-data">
+    <div class="row g-3 mb-3"><div class="col-md-6"><label class="form-label">Mode Tanggal</label><select name="date_mode" class="form-select" onchange="document.getElementById('eDateGrp').style.display=this.value==='manual'?'block':'none'"><option value="auto">Otomatis</option><option value="manual">Manual</option></select></div>
+    <div class="col-md-6" id="eDateGrp" style="display:none"><label class="form-label">Tanggal &amp; Jam</label><input type="datetime-local" name="date" class="form-control"></div></div>
+    <div class="row g-3 mb-3"><div class="col-md-6"><label class="form-label">Tipe *</label><select name="type" class="form-select" required><option value="debit">Debit</option><option value="credit">Kredit</option></select></div>
+    <div class="col-md-6"><label class="form-label">Jumlah (Rp) *</label><input type="number" name="amount" class="form-control" required min="1"></div></div>
+    <div class="mb-3"><label class="form-label">No. Bukti</label><input type="text" name="voucher_no" class="form-control"></div>
+    <div class="mb-3"><label class="form-label">Kategori</label><input type="text" name="category" class="form-control"></div>
+    <div class="mb-3"><label class="form-label">Pihak Terkait</label><input type="text" name="party" class="form-control"></div>
+    <div class="mb-3"><label class="form-label">Deskripsi</label><textarea name="description" class="form-control" rows="2"></textarea></div>
+    <div class="mb-3"><label class="form-label">Catatan</label><textarea name="note" class="form-control" rows="2"></textarea></div>
+    <div class="mb-3"><label class="form-label">Lampiran <small class="text-muted">(max 5)</small></label><input type="file" name="files" class="form-control" multiple accept="image/*,application/pdf"></div>
+    <div class="d-flex justify-content-end gap-2"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button><button type="submit" class="btn btn-primary">Simpan</button></div>
+    </form></div></div></div></div>
+
+    <!-- Modal Edit Entri -->
+    <div class="modal fade" id="editModal" tabindex="-1"><div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h6 class="modal-title">Edit Entri</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+    <div id="editError" class="alert alert-danger py-2" style="display:none"></div>
+    <form id="editForm" enctype="multipart/form-data">
+    <div class="mb-3"><label class="form-label">Tanggal &amp; Jam</label><input type="datetime-local" name="date" id="editDate" class="form-control"></div>
+    <div class="row g-3 mb-3"><div class="col-md-6"><label class="form-label">Tipe *</label><select name="type" id="editType" class="form-select"><option value="debit">Debit</option><option value="credit">Kredit</option></select></div>
+    <div class="col-md-6"><label class="form-label">Jumlah (Rp) *</label><input type="number" name="amount" id="editAmount" class="form-control" required min="1"></div></div>
+    <div class="mb-3"><label class="form-label">No. Bukti</label><input type="text" name="voucher_no" id="editVoucher" class="form-control"></div>
+    <div class="mb-3"><label class="form-label">Kategori</label><input type="text" name="category" id="editCategory" class="form-control"></div>
+    <div class="mb-3"><label class="form-label">Pihak Terkait</label><input type="text" name="party" id="editParty" class="form-control"></div>
+    <div class="mb-3"><label class="form-label">Deskripsi</label><textarea name="description" id="editDesc" class="form-control" rows="2"></textarea></div>
+    <div class="mb-3"><label class="form-label">Catatan</label><textarea name="note" id="editNote" class="form-control" rows="2"></textarea></div>
+    <div class="mb-3"><label class="form-label">Tambah Lampiran</label><input type="file" name="files" class="form-control" multiple accept="image/*,application/pdf"></div>
+    <input type="hidden" name="entry_id" id="editEntryId">
+    <div class="d-flex justify-content-end gap-2"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button><button type="submit" class="btn btn-primary">Simpan</button></div>
+    </form></div></div></div></div>
+
+    <!-- Modal Users -->
+    <div class="modal fade" id="usersModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content">
+    <div class="modal-header"><h6 class="modal-title">Kelola User</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body" id="usersBody"><div class="text-center py-3 text-muted">Memuat...</div></div></div></div></div>
+
+    <!-- Modal Share -->
+    <div class="modal fade" id="shareModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content">
+    <div class="modal-header"><h6 class="modal-title">Bagikan Buku</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body" id="shareBody"><div class="text-center py-3 text-muted">Memuat...</div></div></div></div></div>
+
+    <!-- Modal Audit -->
+    <div class="modal fade" id="auditModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content">
+    <div class="modal-header"><h6 class="modal-title">Riwayat Aktivitas</h6><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body" id="auditBody"><div class="text-center py-3 text-muted">Memuat...</div></div></div></div></div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.7/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.7/js/dataTables.bootstrap5.min.js"></script>
     <script>
+        var slug = '{{.Book.Slug}}';
+        var entriesTable;
         $(document).ready(function() {
-            var table = $('#entriesTable').DataTable({
+            entriesTable = $('#entriesTable').DataTable({
                 order: [[0, 'desc']],
                 language: { search: 'Cari:', lengthMenu: 'Tampilkan _MENU_', info: 'Menampilkan _START_-_END_ dari _TOTAL_' }
             });
@@ -201,7 +256,97 @@
                 document.getElementById('d-note').textContent = d.note || '-';
                 new bootstrap.Modal(document.getElementById('detailModal')).show();
             });
+
+            // New entry form submit via AJAX
+            $('#entryForm').on('submit', function(e) {
+                e.preventDefault();
+                var fd = new FormData(this);
+                $('#entryError').hide();
+                $.ajax({ url: '/books/'+slug+'/entries', method: 'POST', data: fd, processData: false, contentType: false,
+                    success: function() { $('#entryModal').modal('hide'); reloadPage(); },
+                    error: function(xhr) {
+                        var u = xhr.responseURL || '';
+                        var m = u.match(/[?&]error=([^&]+)/);
+                        $('#entryError').text(m ? decodeURIComponent(m[1].replace(/\+/g,' ')) : 'Gagal menyimpan').show();
+                    }
+                });
+            });
+
+            // Edit entry: populate modal from row data
+            $(document).on('click', '.edit-entry-btn', function() {
+                var d = this.dataset;
+                $('#editEntryId').val(d.id);
+                $('#editDate').val(d.date);
+                $('#editType').val(d.type);
+                $('#editAmount').val(d.amount);
+                $('#editVoucher').val(d.voucher);
+                $('#editCategory').val(d.category);
+                $('#editParty').val(d.party);
+                $('#editDesc').val(d.desc);
+                $('#editNote').val(d.note);
+                $('#editError').hide();
+                new bootstrap.Modal(document.getElementById('editModal')).show();
+            });
+            $('#editForm').on('submit', function(e) {
+                e.preventDefault();
+                var fd = new FormData(this);
+                var eid = fd.get('entry_id'); fd.delete('entry_id');
+                $('#editError').hide();
+                $.ajax({ url: '/books/'+slug+'/entries/'+eid+'/edit', method: 'POST', data: fd, processData: false, contentType: false,
+                    success: function() { $('#editModal').modal('hide'); reloadPage(); },
+                    error: function() { $('#editError').text('Gagal menyimpan').show(); }
+                });
+            });
         });
+
+        function reloadPage() { location.reload(); }
+
+        function loadFragment(url, bodyId, modalId, after) {
+            var old = $('#'+bodyId).find('table');
+            old.each(function() { if ($.fn.DataTable.isDataTable(this)) $(this).DataTable().destroy(); });
+            $('#'+bodyId).html('<div class="text-center py-3 text-muted">Memuat...</div>');
+            var modal = new bootstrap.Modal(document.getElementById(modalId)); modal.show();
+            $.get(url, function(html) {
+                $('#'+bodyId).html(html);
+                var t = $('#'+bodyId).find('table');
+                if (t.length && !$.fn.DataTable.isDataTable(t[0])) {
+                    t.DataTable({ language: { search: 'Cari:', lengthMenu: 'Tampilkan _MENU_', info: 'Menampilkan _START_-_END_ dari _TOTAL_' } });
+                }
+                bindModalActions(bodyId);
+                if (after) after();
+            });
+        }
+
+        function bindModalActions(bodyId) {
+            var b = $('#'+bodyId);
+            // remove user
+            b.find('.remove-user-btn').off('click').on('click', function() {
+                var uid = this.dataset.userid;
+                if (!confirm('Hapus user ini?')) return;
+                $.post('/books/'+slug+'/users/remove?fragment=1', { user_id: uid }, function() {
+                    loadFragment('/books/'+slug+'/users?fragment=1', 'usersBody', 'usersModal');
+                });
+            });
+            // revoke link
+            b.find('.revoke-link-btn').off('click').on('click', function() {
+                var lid = this.dataset.linkid;
+                if (!confirm('Cabut link ini?')) return;
+                $.post('/books/'+slug+'/share/revoke?fragment=1', { link_id: lid }, function() {
+                    loadFragment('/books/'+slug+'/share?fragment=1', 'shareBody', 'shareModal');
+                });
+            });
+            // create share link
+            b.find('.share-form').off('submit').on('submit', function(e) {
+                e.preventDefault();
+                $.post('/books/'+slug+'/share?fragment=1', $(this).serialize(), function(html) {
+                    $('#shareResult').html(html);
+                    loadFragment('/books/'+slug+'/share?fragment=1', 'shareBody', 'shareModal', function() {
+                        var iv = $('#newLinkVal');
+                        if (iv.length) $('#shareResult').html('<div class="input-group mb-2"><input type="text" class="form-control" value="'+iv.val()+'" readonly><button class="btn btn-outline-secondary" onclick="navigator.clipboard.writeText(this.previousElementSibling.value)">Salin</button></div>');
+                    });
+                });
+            });
+        }
     </script>
 </body>
 </html>

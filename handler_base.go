@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
-	"strconv"
 	"strings"
 	"time"
 
@@ -93,12 +92,28 @@ func (p PageData) WithUser(s *Session) PageData {
 	return p
 }
 
-func getBookID(path string) int {
+func getBookSlug(path string) string {
 	parts := strings.Split(strings.Trim(path, "/"), "/")
-	if len(parts) < 2 {
-		return 0
+	if len(parts) < 2 || parts[0] != "books" {
+		return ""
 	}
-	id, _ := strconv.Atoi(parts[1])
+	return parts[1]
+}
+
+func resolveBook(path string) (*Book, int) {
+	slug := getBookSlug(path)
+	if slug == "" {
+		return nil, 0
+	}
+	b, err := getBookBySlug(db, slug)
+	if err != nil {
+		return nil, 0
+	}
+	return b, b.ID
+}
+
+func resolveBookID(path string) int {
+	_, id := resolveBook(path)
 	return id
 }
 
