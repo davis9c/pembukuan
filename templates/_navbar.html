@@ -1,16 +1,17 @@
 <!-- Shared navbar -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 <nav class="navbar navbar-expand navbar-dark bg-primary">
   <div class="container-fluid">
     <a class="navbar-brand" href="/"><strong>Pembukuan</strong></a>
     <ul class="navbar-nav ms-auto align-items-center">
       <li class="nav-item dropdown">
         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-          <span id="themeIcon">🌙</span>
+          <i id="themeIcon" class="fa-solid fa-moon"></i>
         </a>
         <ul class="dropdown-menu dropdown-menu-end">
-          <li><a class="dropdown-item" href="javascript:setTheme('light')">☀️ Terang</a></li>
-          <li><a class="dropdown-item" href="javascript:setTheme('dark')">🌙 Gelap</a></li>
-          <li><a class="dropdown-item" href="javascript:setTheme('auto')">🌗 Otomatis</a></li>
+          <li><a class="dropdown-item" href="javascript:setTheme('light')"><i class="fa-solid fa-sun me-2"></i>Terang</a></li>
+          <li><a class="dropdown-item" href="javascript:setTheme('dark')"><i class="fa-solid fa-moon me-2"></i>Gelap</a></li>
+          <li><a class="dropdown-item" href="javascript:setTheme('auto')"><i class="fa-solid fa-circle-half-stroke me-2"></i>Otomatis</a></li>
         </ul>
       </li>
       <li class="nav-item dropdown">
@@ -37,12 +38,12 @@ function setTheme(mode) {
   document.documentElement.setAttribute('data-theme-mode', mode);
   localStorage.setItem('theme', mode);
   var icon = document.getElementById('themeIcon');
-  if (icon) icon.textContent = mode === 'dark' ? '☀️' : (mode === 'light' ? '🌙' : '🌗');
+  if (icon) icon.className = 'fa-solid ' + (mode === 'dark' ? 'fa-sun' : (mode === 'light' ? 'fa-moon' : 'fa-circle-half-stroke'));
 }
 (function() {
   var mode = document.documentElement.getAttribute('data-theme-mode') || 'auto';
   var icon = document.getElementById('themeIcon');
-  if (icon) icon.textContent = mode === 'dark' ? '☀️' : (mode === 'light' ? '🌙' : '🌗');
+  if (icon) icon.className = 'fa-solid ' + (mode === 'dark' ? 'fa-sun' : (mode === 'light' ? 'fa-moon' : 'fa-circle-half-stroke'));
 })();
 </script>
 <style>
