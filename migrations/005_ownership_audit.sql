@@ -9,8 +9,8 @@ UPDATE books SET owner_id = (SELECT user_id FROM book_users WHERE book_users.boo
 
 -- book_users extra metadata
 ALTER TABLE book_users ADD COLUMN status TEXT NOT NULL DEFAULT 'active';
-ALTER TABLE book_users ADD COLUMN invited_at DATETIME DEFAULT CURRENT_TIMESTAMP;
-ALTER TABLE book_users ADD COLUMN accepted_at DATETIME;
+ALTER TABLE book_users ADD COLUMN invited_at TEXT DEFAULT '';
+ALTER TABLE book_users ADD COLUMN accepted_at TEXT DEFAULT '';
 
 -- entries extra fields
 ALTER TABLE entries ADD COLUMN voucher_no TEXT DEFAULT '';
