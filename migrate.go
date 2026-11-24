@@ -57,9 +57,31 @@ func runMigrations(db *sql.DB) error {
 		if err != nil {
 			return fmt.Errorf("begin migration %d: %w", m.ver, err)
 		}
-		if _, err := tx.Exec(m.data); err != nil {
-			tx.Rollback()
-			return fmt.Errorf("migration %d: %w", m.ver, err)
+		// split by semicolon; skip empty and comment-only segments
+		for _, stmt := range strings.Split(m.data, ";") {
+			st := strings.TrimSpace(stmt)
+			// remove leading SQL comment lines
+			for strings.HasPrefix(st, "--") {
+				if idx := strings.IndexByte(st, '\n'); idx >= 0 {
+					st = strings.TrimSpace(st[idx+1:])
+				} else {
+					st = ""
+				}
+			}
+			if st == "" {
+				continue
+			}
+			if _, err := tx.Exec(st); err != nil {
+				errStr := err.Error()
+				// squat: skip duplicate column / table errors for idempotent re-runs
+				if strings.Contains(errStr, "duplicate column name") ||
+					strings.Contains(errStr, "already exists") ||
+					strings.Contains(errStr, "duplicate") {
+					continue
+				}
+				tx.Rollback()
+				return fmt.Errorf("migration %d: %w (sql: %s)", m.ver, err, st)
+			}
 		}
 		if _, err := tx.Exec("INSERT INTO schema_version (version) VALUES (?)", m.ver); err != nil {
 			tx.Rollback()
