@@ -33,9 +33,8 @@ func sharePage(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
-	canManage := s.Role == "super_admin"
-	if !canManage {
-		role, _ := getUserBookRole(db, s.UserID, bookID)
+	canManage := false
+	if role, err := getUserBookRole(db, s.UserID, bookID); err == nil {
 		canManage = role == "owner" || role == "admin"
 	}
 	if !canManage {
@@ -63,9 +62,8 @@ func createShareLinkHandler(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
-	canManage := s.Role == "super_admin"
-	if !canManage {
-		role, _ := getUserBookRole(db, s.UserID, bookID)
+	canManage := false
+	if role, err := getUserBookRole(db, s.UserID, bookID); err == nil {
 		canManage = role == "owner" || role == "admin"
 	}
 	if !canManage {
@@ -109,17 +107,19 @@ func createShareLinkHandler(w http.ResponseWriter, r *http.Request) {
 	insertAuditLog(db, s.UserID, bookID, "share_link", 0, "create_share_link", "", permission, r.RemoteAddr)
 
 	frag := r.URL.Query().Get("fragment") == "1"
-	linkURL := fmt.Sprintf("/share/%s", tok)
+	linkURL := fmt.Sprintf("%s/share/%s", appBaseURL, tok)
 	if frag {
-		// return the created link info as HTML snippet
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		fmt.Fprintf(w, `<div class="alert alert-success py-2">Link dibuat!</div>
-<div class="input-group mb-2"><input type="text" class="form-control" value="%s" readonly id="newLinkVal"><button class="btn btn-outline-secondary" onclick="navigator.clipboard.writeText('%s')">Salin</button></div>
-<small class="text-muted">Kedaluwarsa: %s. Akses: %s.</small>`, linkURL, linkURL, expires.Format("02 Jan 2006 15:04"), permission)
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		json.NewEncoder(w).Encode(map[string]string{
+			"url":        linkURL,
+			"expires":    expires.Format("02 Jan 2006 15:04"),
+			"permission": permission,
+		})
 		return
 	}
 	tmpl.ExecuteTemplate(w, "share_created.html", PageData{
 		"BookID":     bookID,
+		"BookSlug":   book.Slug,
 		"Token":      tok,
 		"Link":       linkURL,
 		"ExpiresAt":  expires,
@@ -134,9 +134,8 @@ func revokeShareLinkHandler(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
 		return
 	}
-	canManage := s.Role == "super_admin"
-	if !canManage {
-		role, _ := getUserBookRole(db, s.UserID, bookID)
+	canManage := false
+	if role, err := getUserBookRole(db, s.UserID, bookID); err == nil {
 		canManage = role == "owner" || role == "admin"
 	}
 	if !canManage {
@@ -250,9 +249,8 @@ func voidEntryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	entryID := getEntryID(r.URL.Path)
-	canEdit := s.Role == "super_admin"
-	if !canEdit {
-		role, _ := getUserBookRole(db, s.UserID, bookID)
+	canEdit := false
+	if role, err := getUserBookRole(db, s.UserID, bookID); err == nil {
 		canEdit = role == "owner" || role == "admin" || role == "editor"
 	}
 	if !canEdit {

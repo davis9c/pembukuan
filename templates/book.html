@@ -27,6 +27,7 @@
             <div>
                 <h5 class="mb-0">{{.Book.Name}}</h5>
                 {{if .Book.Description}}<small class="text-muted">{{.Book.Description}}</small>{{end}}
+                {{if .Book.OwnerName}}<br><small class="text-muted">Dibuat oleh {{.Book.OwnerName}}</small>{{end}}
             </div>
             <div class="d-flex gap-2">
                 {{if .CanEdit}}
@@ -338,13 +339,27 @@
             // create share link
             b.find('.share-form').off('submit').on('submit', function(e) {
                 e.preventDefault();
-                $.post('/books/'+slug+'/share?fragment=1', $(this).serialize(), function(html) {
-                    $('#shareResult').html(html);
+                $.post('/books/'+slug+'/share?fragment=1', $(this).serialize(), function(data) {
+                    // reload table first, then show new link result
                     loadFragment('/books/'+slug+'/share?fragment=1', 'shareBody', 'shareModal', function() {
-                        var iv = $('#newLinkVal');
-                        if (iv.length) $('#shareResult').html('<div class="input-group mb-2"><input type="text" class="form-control" value="'+iv.val()+'" readonly><button class="btn btn-outline-secondary" onclick="navigator.clipboard.writeText(this.previousElementSibling.value)">Salin</button></div>');
+                        var u = data.url || '';
+                        $('#shareResult').html('<div class="alert alert-success py-2">Link dibuat! (token hanya ditampilkan sekali)</div>'+
+                            '<div class="input-group mb-1"><input type="text" class="form-control" id="newLinkVal" value="'+u+'" readonly>'+
+                            '<button class="btn btn-outline-secondary" onclick="copyLink()">Salin</button></div>'+
+                            '<small class="text-muted">Kedaluwarsa: '+data.expires+'. Akses: '+data.permission+'.</small>');
                     });
-                });
+                }, 'json');
+            });
+        }
+
+        function copyLink() {
+            var el = document.getElementById('newLinkVal');
+            if (!el) return;
+            navigator.clipboard.writeText(el.value).then(function() {
+                var btn = el.nextElementSibling;
+                var old = btn.textContent;
+                btn.textContent = 'Tersalin!';
+                setTimeout(function(){ btn.textContent = old; }, 1500);
             });
         }
     </script>

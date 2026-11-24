@@ -6,8 +6,19 @@
 <div class="container mt-4" style="max-width:600px;">
 <h5>Link Berbagi Dibuat</h5>
 <div class="alert alert-warning">Simpan link ini. Token tidak akan ditampilkan lagi.</div>
-<div class="input-group mb-3"><input type="text" class="form-control" value="{{.Link}}" id="linkVal" readonly><button class="btn btn-outline-secondary" onclick="navigator.clipboard.writeText(document.getElementById('linkVal').value)">Salin</button></div>
+<div class="input-group mb-3"><input type="text" class="form-control" value="{{.Link}}" id="linkVal" readonly><button class="btn btn-outline-secondary" onclick="copyLink()">Salin</button></div>
 <p class="small text-muted">Kedaluwarsa: {{fmtTime .ExpiresAt}}. Akses: {{.Permission}}.</p>
-<a href="/books/{{.BookID}}/share" class="btn btn-secondary btn-sm">Kembali</a>
+<a href="/books/{{.BookSlug}}/share" class="btn btn-secondary btn-sm">Kembali</a>
 </div>
+<script>
+function copyLink() {
+    var el = document.getElementById('linkVal');
+    navigator.clipboard.writeText(el.value).then(function() {
+        var btn = el.nextElementSibling;
+        var old = btn.textContent;
+        btn.textContent = 'Tersalin!';
+        setTimeout(function(){ btn.textContent = old; }, 1500);
+    });
+}
+</script>
 </body></html>

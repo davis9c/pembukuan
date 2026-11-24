@@ -6,12 +6,15 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 func main() {
 	adminUser = envOrDefault("ADMIN_USER", "admin")
 	adminPass = envOrDefault("ADMIN_PASS", "Admin1234")
 	dbPath := envOrDefault("DB_PATH", "pembukuan.db")
+	port := envOrDefault("PORT", "8080")
+	appBaseURL = strings.TrimRight(envOrDefault("BASE_URL", "http://localhost:"+port), "/")
 
 	var err error
 	db, err = initDB(dbPath)
@@ -212,7 +215,6 @@ func main() {
 		}
 	}))
 
-	port := envOrDefault("PORT", "8080")
 	log.Printf("server starting on :%s (admin: %s)", port, adminUser)
 	log.Fatal(http.ListenAndServe(":"+port, mux))
 }

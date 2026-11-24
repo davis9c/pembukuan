@@ -22,6 +22,7 @@ var (
 	adminPass         string
 	ugClient          *UserGateClient
 	localAdminEnabled bool
+	appBaseURL       string
 )
 
 var funcMap = template.FuncMap{

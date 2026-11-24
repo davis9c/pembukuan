@@ -134,11 +134,12 @@ func getBooksForUser(db *sql.DB, userID int, isSuperAdmin bool) ([]Book, error) 
 	var rows *sql.Rows
 	var err error
 	if isSuperAdmin {
-		rows, err = db.Query("SELECT id, slug, name, description, owner_id, status, opening_balance, currency, created_at FROM books ORDER BY name")
+		rows, err = db.Query("SELECT b.id, b.slug, b.name, b.description, b.owner_id, COALESCE(u.username,''), b.status, b.opening_balance, b.currency, b.created_at FROM books b LEFT JOIN users u ON b.owner_id = u.id ORDER BY b.name")
 	} else {
 		rows, err = db.Query(`
-			SELECT b.id, b.slug, b.name, b.description, b.owner_id, b.status, b.opening_balance, b.currency, b.created_at
+			SELECT b.id, b.slug, b.name, b.description, b.owner_id, COALESCE(u.username,''), b.status, b.opening_balance, b.currency, b.created_at
 			FROM books b
+			LEFT JOIN users u ON b.owner_id = u.id
 			JOIN book_users bu ON b.id = bu.book_id
 			WHERE bu.user_id = ? AND bu.status = 'active' AND b.status = 'active'
 			ORDER BY b.name`, userID)
@@ -158,7 +159,7 @@ func scanBooks(rows *sql.Rows) ([]Book, error) {
 		var owner sql.NullInt64
 		var status sql.NullString
 		var currency sql.NullString
-		rows.Scan(&b.ID, &slug, &b.Name, &b.Description, &owner, &status, &b.OpeningBalance, &currency, &b.CreatedAt)
+		rows.Scan(&b.ID, &slug, &b.Name, &b.Description, &owner, &b.OwnerName, &status, &b.OpeningBalance, &currency, &b.CreatedAt)
 		if slug.Valid {
 			b.Slug = slug.String
 		}
@@ -186,8 +187,8 @@ func getBook(db *sql.DB, bookID int) (*Book, error) {
 	var owner sql.NullInt64
 	var status sql.NullString
 	var currency sql.NullString
-	err := db.QueryRow("SELECT id, slug, name, description, owner_id, status, opening_balance, currency, created_at FROM books WHERE id = ?", bookID).
-		Scan(&b.ID, &slug, &b.Name, &b.Description, &owner, &status, &b.OpeningBalance, &currency, &b.CreatedAt)
+	err := db.QueryRow("SELECT b.id, b.slug, b.name, b.description, b.owner_id, COALESCE(u.username,''), b.status, b.opening_balance, b.currency, b.created_at FROM books b LEFT JOIN users u ON b.owner_id = u.id WHERE b.id = ?", bookID).
+		Scan(&b.ID, &slug, &b.Name, &b.Description, &owner, &b.OwnerName, &status, &b.OpeningBalance, &currency, &b.CreatedAt)
 	if err != nil {
 		return nil, err
 	}

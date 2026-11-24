@@ -15,12 +15,9 @@ func manageUsersPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	canManage := s.Role == "super_admin"
-	if !canManage {
-		role, err := getUserBookRole(db, s.UserID, bookID)
-		if err == nil {
-			canManage = role == "owner" || role == "admin"
-		}
+	canManage := false
+	if role, err := getUserBookRole(db, s.UserID, bookID); err == nil {
+		canManage = role == "owner" || role == "admin"
 	}
 	if !canManage {
 		http.Redirect(w, r, "/books/"+book.Slug, http.StatusSeeOther)
@@ -49,12 +46,9 @@ func addUserToBookHandler(w http.ResponseWriter, r *http.Request) {
 	s := getSession(r)
 	bookID := resolveBookID(r.URL.Path)
 
-	canManage := s.Role == "super_admin"
-	if !canManage {
-		role, err := getUserBookRole(db, s.UserID, bookID)
-		if err == nil {
-			canManage = role == "owner" || role == "admin"
-		}
+	canManage := false
+	if role, err := getUserBookRole(db, s.UserID, bookID); err == nil {
+		canManage = role == "owner" || role == "admin"
 	}
 	if !canManage {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -83,12 +77,9 @@ func removeUserFromBookHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	canManage := s.Role == "super_admin"
-	if !canManage {
-		role, err := getUserBookRole(db, s.UserID, bookID)
-		if err == nil {
-			canManage = role == "owner" || role == "admin"
-		}
+	canManage := false
+	if role, err := getUserBookRole(db, s.UserID, bookID); err == nil {
+		canManage = role == "owner" || role == "admin"
 	}
 	if !canManage {
 		http.Redirect(w, r, "/", http.StatusSeeOther)

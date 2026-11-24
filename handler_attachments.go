@@ -184,7 +184,7 @@ func canAccessBook(s *Session, bookID int, needEdit bool) bool {
 	if s == nil {
 		return false
 	}
-	if s.Role == "super_admin" {
+	if s.Role == "super_admin" && !needEdit {
 		return true
 	}
 	role, err := getUserBookRole(db, s.UserID, bookID)
@@ -194,7 +194,7 @@ func canAccessBook(s *Session, bookID int, needEdit bool) bool {
 	if !needEdit {
 		return true
 	}
-	return role == "admin" || role == "editor"
+	return role == "owner" || role == "admin" || role == "editor"
 }
 
 // path helpers for nested routes like /books/{bookID}/entries/{entryID}/attachments/...

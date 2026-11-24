@@ -15,6 +15,7 @@ type Book struct {
 	Name           string
 	Description    string
 	OwnerID        int
+	OwnerName      string
 	Status         string
 	OpeningBalance int64
 	Currency       string

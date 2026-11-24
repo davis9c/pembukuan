@@ -89,15 +89,13 @@ func viewBook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	canView := s.Role == "super_admin"
-	canEdit := s.Role == "super_admin"
-	canManage := s.Role == "super_admin"
-	if !canView {
-		role, err := getUserBookRole(db, s.UserID, bookID)
-		if err == nil {
-			canView = true
-			canEdit = role == "owner" || role == "admin" || role == "editor"
-			canManage = role == "owner" || role == "admin"
-		}
+	canEdit := false
+	canManage := false
+	role, roleErr := getUserBookRole(db, s.UserID, bookID)
+	if roleErr == nil {
+		canView = true
+		canEdit = role == "owner" || role == "admin" || role == "editor"
+		canManage = role == "owner" || role == "admin"
 	}
 	if !canView {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -160,12 +158,9 @@ func addEntryPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	canEdit := s.Role == "super_admin"
-	if !canEdit {
-		role, err := getUserBookRole(db, s.UserID, bookID)
-		if err == nil {
-			canEdit = role == "owner" || role == "admin" || role == "editor"
-		}
+	canEdit := false
+	if role, err := getUserBookRole(db, s.UserID, bookID); err == nil {
+		canEdit = role == "owner" || role == "admin" || role == "editor"
 	}
 	if !canEdit {
 		http.Redirect(w, r, "/books/"+book.Slug, http.StatusSeeOther)
@@ -187,12 +182,9 @@ func addEntryHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	canEdit := s.Role == "super_admin"
-	if !canEdit {
-		role, err := getUserBookRole(db, s.UserID, bookID)
-		if err == nil {
-			canEdit = role == "owner" || role == "admin" || role == "editor"
-		}
+	canEdit := false
+	if role, err := getUserBookRole(db, s.UserID, bookID); err == nil {
+		canEdit = role == "owner" || role == "admin" || role == "editor"
 	}
 	if !canEdit {
 		http.Redirect(w, r, "/", http.StatusSeeOther)
@@ -285,9 +277,8 @@ func editEntryPage(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/books/"+book.Slug, http.StatusSeeOther)
 		return
 	}
-	canEdit := s.Role == "super_admin"
-	if !canEdit {
-		role, _ := getUserBookRole(db, s.UserID, bookID)
+	canEdit := false
+	if role, err := getUserBookRole(db, s.UserID, bookID); err == nil {
 		canEdit = role == "owner" || role == "admin" || role == "editor"
 	}
 	if !canEdit {
@@ -317,9 +308,8 @@ func editEntryHandler(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/books/"+book.Slug, http.StatusSeeOther)
 		return
 	}
-	canEdit := s.Role == "super_admin"
-	if !canEdit {
-		role, _ := getUserBookRole(db, s.UserID, bookID)
+	canEdit := false
+	if role, err := getUserBookRole(db, s.UserID, bookID); err == nil {
 		canEdit = role == "owner" || role == "admin" || role == "editor"
 	}
 	if !canEdit {
