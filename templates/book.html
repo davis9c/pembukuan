@@ -7,7 +7,7 @@
     <script>(function(){var s=localStorage.getItem('theme')||'auto';document.documentElement.setAttribute('data-bs-theme',s==='auto'?(matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'):s);document.documentElement.setAttribute('data-theme-mode',s)})()</script>
     <title>{{.Book.Name}} - Pembukuan</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.datatables.net/v/dt/dt-3.1.6/datatables.min.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/2.2.2/css/dataTables.bootstrap5.min.css">
 </head>
 <body>
     {{template "_navbar.html" .}}
@@ -69,14 +69,11 @@
                 <thead>
                     <tr>
                         <th class="small text-body-secondary text-uppercase">Tanggal</th>
-                        <th class="small text-body-secondary text-uppercase">No. Bukti</th>
                         <th class="small text-body-secondary text-uppercase">Keterangan</th>
                         <th class="small text-body-secondary text-uppercase">Kategori</th>
-                        <th class="small text-body-secondary text-uppercase">Tipe</th>
                         <th class="small text-body-secondary text-uppercase text-end">Debit</th>
                         <th class="small text-body-secondary text-uppercase text-end">Kredit</th>
                         <th class="small text-body-secondary text-uppercase text-end">Saldo</th>
-                        <th class="small text-body-secondary text-uppercase">Bukti</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -95,38 +92,14 @@
                         data-note="{{.Note}}"
                         data-createdby="{{.CreatedBy}}"
                         data-updatedby="{{.UpdatedBy}}"
-                        data-voided="{{.Voided}}">
+                        data-voided="{{.Voided}}"
+                        data-atts='[{{$entryID := .ID}}{{$atts := index $.Attachments $entryID}}{{range $i, $a := $atts}}{{if $i}},{{end}}{"id":{{$a.ID}},"name":"{{$a.Filename}}","mime":"{{$a.MimeType}}"}{{end}}]'>
                         <td class="small">{{fmtDate .Date}}</td>
-                        <td class="small">{{.VoucherNo}}</td>
                         <td>{{.Description}}{{if .Party}}<br><small class="text-muted">{{.Party}}</small>{{end}}</td>
-                        <td class="small">{{.Category}}</td>
-                        <td>
-                            {{if .Voided}}
-                            <span class="badge bg-secondary">Void</span>
-                            {{else if eq .Type "debit"}}
-                            <span class="badge bg-success-subtle text-success">Debit</span>
-                            {{else}}
-                            <span class="badge bg-danger-subtle text-danger">Kredit</span>
-                            {{end}}
-                        </td>
+                        <td class="small">{{if .Voided}}<span class="badge bg-secondary me-1">Void</span>{{end}}{{.Category}}</td>
                         <td class="text-end font-monospace small">{{if and (eq .Type "debit") (not .Voided)}}Rp {{fmtAmount .Amount}}{{else}}-{{end}}</td>
                         <td class="text-end font-monospace small">{{if and (eq .Type "credit") (not .Voided)}}Rp {{fmtAmount .Amount}}{{else}}-{{end}}</td>
                         <td class="text-end font-monospace small">Rp {{fmtAmount .RunningBalance}}</td>
-                        <td>
-                            {{$entryID := .ID}}
-                            {{$atts := index $.Attachments $entryID}}
-                            {{if $atts}}
-                            <div class="d-flex gap-1 flex-wrap">
-                            {{range $atts}}
-                                {{if isImage .MimeType}}
-                                <a href="/attachments/?id={{.ID}}" target="_blank" title="{{.Filename}}"><img src="/attachments/?id={{.ID}}" class="rounded border" style="width:28px;height:28px;object-fit:cover;"></a>
-                                {{else}}
-                                <a href="/attachments/?id={{.ID}}" target="_blank" class="badge text-bg-light text-decoration-none">PDF</a>
-                                {{end}}
-                            {{end}}
-                            </div>
-                            {{else}}<span class="text-muted small">-</span>{{end}}
-                        </td>
                     </tr>
                     {{end}}
                 </tbody>
@@ -155,7 +128,16 @@
                         <dt class="col-sm-4">Tipe</dt><dd class="col-sm-8" id="d-type"></dd>
                         <dt class="col-sm-4">Jumlah</dt><dd class="col-sm-8" id="d-amount"></dd>
                         <dt class="col-sm-4">Saldo Berjalan</dt><dd class="col-sm-8" id="d-balance"></dd>
+                        <dt class="col-sm-4">Tanggal</dt><dd class="col-sm-8" id="d-date"></dd>
+                        <dt class="col-sm-4">No. Bukti</dt><dd class="col-sm-8" id="d-voucher"></dd>
+                        <dt class="col-sm-4">Keterangan</dt><dd class="col-sm-8" id="d-desc"></dd>
+                        <dt class="col-sm-4">Kategori</dt><dd class="col-sm-8" id="d-category"></dd>
+                        <dt class="col-sm-4">Pihak Terkait</dt><dd class="col-sm-8" id="d-party"></dd>
+                        <dt class="col-sm-4">Tipe</dt><dd class="col-sm-8" id="d-type"></dd>
+                        <dt class="col-sm-4">Jumlah</dt><dd class="col-sm-8" id="d-amount"></dd>
+                        <dt class="col-sm-4">Saldo Berjalan</dt><dd class="col-sm-8" id="d-balance"></dd>
                         <dt class="col-sm-4">Catatan</dt><dd class="col-sm-8" id="d-note"></dd>
+                        <dt class="col-sm-4">Lampiran</dt><dd class="col-sm-8" id="d-lampiran"></dd>
                     </dl>
                 </div>
                 <div class="modal-footer">
@@ -223,7 +205,9 @@
     <div class="modal-body" id="auditBody"><div class="text-center py-3 text-muted">Memuat...</div></div></div></div></div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.datatables.net/v/dt/dt-3.1.6/datatables.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.datatables.net/2.2.2/js/dataTables.min.js"></script>
+    <script src="https://cdn.datatables.net/2.2.2/js/dataTables.bootstrap5.min.js"></script>
     <script>
         var slug = '{{.Book.Slug}}';
         var entriesTable;
@@ -238,12 +222,26 @@
                 document.getElementById('d-date').textContent = d.date;
                 document.getElementById('d-voucher').textContent = d.voucher || '-';
                 document.getElementById('d-desc').textContent = d.desc || '-';
-                document.getElementById('d-category').textContent = d.category || '-';
+                document.getElementById('d-category').textContent = (d.voided==='true'?'[Void] ':'') + (d.category || '-');
                 document.getElementById('d-party').textContent = d.party || '-';
                 document.getElementById('d-type').textContent = d.type === 'debit' ? 'Debit (Uang Masuk)' : 'Kredit (Uang Keluar)';
                 document.getElementById('d-amount').textContent = 'Rp ' + Number(d.amount).toLocaleString('id-ID');
                 document.getElementById('d-balance').textContent = 'Rp ' + Number(d.balance).toLocaleString('id-ID');
                 document.getElementById('d-note').textContent = d.note || '-';
+                // lampiran
+                var lamp = document.getElementById('d-lampiran');
+                lamp.innerHTML = '';
+                if (d.atts) { try {
+                    var atts = JSON.parse(d.atts);
+                    atts.forEach(function(a) {
+                        var link = '/attachments/?id=' + a.id;
+                        if (a.mime && a.mime.startsWith('image/'))
+                            lamp.innerHTML += '<a href="'+link+'" target="_blank"><img src="'+link+'" class="rounded border me-1 mb-1" style="width:48px;height:48px;object-fit:cover;" title="'+a.name+'"></a>';
+                        else
+                            lamp.innerHTML += '<a href="'+link+'" target="_blank" class="badge text-bg-light text-decoration-none me-1">PDF</a>';
+                    });
+                } catch(e){} }
+                if (!lamp.innerHTML) lamp.textContent = '-';
                 // store entry data for edit/void from detail modal
                 var detailModal = document.getElementById('detailModal');
                 detailModal.dataset.id = d.id;

@@ -228,9 +228,13 @@ func addEntryHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	r.Body = http.MaxBytesReader(w, r.Body, 50<<20)
-	if err := r.ParseMultipartForm(50 << 20); err != nil {
-		redirectError(w, r, "/books/"+book.Slug+"/entries/new", "File+terlalu+besar")
-		return
+	if strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
+		if err := r.ParseMultipartForm(50 << 20); err != nil {
+			redirectError(w, r, "/books/"+book.Slug+"/entries/new", "File+terlalu+besar")
+			return
+		}
+	} else {
+		r.ParseForm()
 	}
 
 	dateMode := r.FormValue("date_mode")
@@ -354,9 +358,13 @@ func editEntryHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	r.Body = http.MaxBytesReader(w, r.Body, 50<<20)
-	if err := r.ParseMultipartForm(50 << 20); err != nil {
-		redirectError(w, r, "/books/"+book.Slug, "File+terlalu+besar")
-		return
+	if strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
+		if err := r.ParseMultipartForm(50 << 20); err != nil {
+			redirectError(w, r, "/books/"+book.Slug, "File+terlalu+besar")
+			return
+		}
+	} else {
+		r.ParseForm()
 	}
 
 	old, _ := getEntryByID(db, entryID)
