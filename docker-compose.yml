@@ -1,0 +1,16 @@
+version: "3.8"
+services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - data:/data
+    environment:
+      - DB_PATH=/data/pembukuan.db
+      - ADMIN_USER=admin
+      - ADMIN_PASS=Admin1234
+    restart: unless-stopped
+
+volumes:
+  data:

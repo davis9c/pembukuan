@@ -1,0 +1,6 @@
+*.db
+.git
+gen.py
+gen2.py
+__pycache__
+.env
