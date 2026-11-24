@@ -112,33 +112,29 @@
 
     <!-- Modal Detail -->
     <div class="modal fade" id="detailModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
+        <div class="modal-dialog modal-xl">
             <div class="modal-content">
                 <div class="modal-header">
                     <h6 class="modal-title">Detail Transaksi</h6>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body">
-                    <dl class="row mb-0">
-                        <dt class="col-sm-4">Tanggal</dt><dd class="col-sm-8" id="d-date"></dd>
-                        <dt class="col-sm-4">No. Bukti</dt><dd class="col-sm-8" id="d-voucher"></dd>
-                        <dt class="col-sm-4">Keterangan</dt><dd class="col-sm-8" id="d-desc"></dd>
-                        <dt class="col-sm-4">Kategori</dt><dd class="col-sm-8" id="d-category"></dd>
-                        <dt class="col-sm-4">Pihak Terkait</dt><dd class="col-sm-8" id="d-party"></dd>
-                        <dt class="col-sm-4">Tipe</dt><dd class="col-sm-8" id="d-type"></dd>
-                        <dt class="col-sm-4">Jumlah</dt><dd class="col-sm-8" id="d-amount"></dd>
-                        <dt class="col-sm-4">Saldo Berjalan</dt><dd class="col-sm-8" id="d-balance"></dd>
-                        <dt class="col-sm-4">Tanggal</dt><dd class="col-sm-8" id="d-date"></dd>
-                        <dt class="col-sm-4">No. Bukti</dt><dd class="col-sm-8" id="d-voucher"></dd>
-                        <dt class="col-sm-4">Keterangan</dt><dd class="col-sm-8" id="d-desc"></dd>
-                        <dt class="col-sm-4">Kategori</dt><dd class="col-sm-8" id="d-category"></dd>
-                        <dt class="col-sm-4">Pihak Terkait</dt><dd class="col-sm-8" id="d-party"></dd>
-                        <dt class="col-sm-4">Tipe</dt><dd class="col-sm-8" id="d-type"></dd>
-                        <dt class="col-sm-4">Jumlah</dt><dd class="col-sm-8" id="d-amount"></dd>
-                        <dt class="col-sm-4">Saldo Berjalan</dt><dd class="col-sm-8" id="d-balance"></dd>
-                        <dt class="col-sm-4">Catatan</dt><dd class="col-sm-8" id="d-note"></dd>
-                        <dt class="col-sm-4">Lampiran</dt><dd class="col-sm-8" id="d-lampiran"></dd>
-                    </dl>
+                <div class="modal-body p-3">
+                    <div class="row g-3">
+                        <div class="col-md-5" id="d-lampiran" style="min-height:200px"></div>
+                        <div class="col-md-7">
+                            <dl class="row mb-0 small">
+                                <dt class="col-sm-5">Tanggal</dt><dd class="col-sm-7" id="d-date"></dd>
+                                <dt class="col-sm-5">No. Bukti</dt><dd class="col-sm-7" id="d-voucher"></dd>
+                                <dt class="col-sm-5">Keterangan</dt><dd class="col-sm-7" id="d-desc"></dd>
+                                <dt class="col-sm-5">Kategori</dt><dd class="col-sm-7" id="d-category"></dd>
+                                <dt class="col-sm-5">Pihak Terkait</dt><dd class="col-sm-7" id="d-party"></dd>
+                                <dt class="col-sm-5">Tipe</dt><dd class="col-sm-7" id="d-type"></dd>
+                                <dt class="col-sm-5">Jumlah</dt><dd class="col-sm-7" id="d-amount"></dd>
+                                <dt class="col-sm-5">Saldo Berjalan</dt><dd class="col-sm-7" id="d-balance"></dd>
+                                <dt class="col-sm-5">Catatan</dt><dd class="col-sm-7" id="d-note"></dd>
+                            </dl>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     {{if .CanEdit}}
@@ -236,12 +232,12 @@
                     atts.forEach(function(a) {
                         var link = '/attachments/?id=' + a.id;
                         if (a.mime && a.mime.startsWith('image/'))
-                            lamp.innerHTML += '<a href="'+link+'" target="_blank"><img src="'+link+'" class="rounded border me-1 mb-1" style="width:48px;height:48px;object-fit:cover;" title="'+a.name+'"></a>';
+                            lamp.innerHTML += '<a href="'+link+'" target="_blank"><img src="'+link+'" class="img-fluid rounded border mb-2" style="max-width:100%;max-height:300px;cursor:pointer" title="'+a.name+' (klik untuk full size)"></a>';
                         else
-                            lamp.innerHTML += '<a href="'+link+'" target="_blank" class="badge text-bg-light text-decoration-none me-1">PDF</a>';
+                            lamp.innerHTML += '<div class="mb-2"><a href="'+link+'" target="_blank" class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-file-pdf me-1"></i>'+a.name+'</a></div>';
                     });
                 } catch(e){} }
-                if (!lamp.innerHTML) lamp.textContent = '-';
+                if (!lamp.innerHTML) lamp.innerHTML = '<span class="text-muted">Tidak ada lampiran</span>';
                 // store entry data for edit/void from detail modal
                 var detailModal = document.getElementById('detailModal');
                 detailModal.dataset.id = d.id;
