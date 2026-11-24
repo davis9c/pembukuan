@@ -3,10 +3,15 @@
   <div class="container-fluid">
     <a class="navbar-brand" href="/"><strong>Pembukuan</strong></a>
     <ul class="navbar-nav ms-auto align-items-center">
-      <li class="nav-item">
-        <button class="btn btn-link nav-link px-2 theme-toggle" type="button" title="Ganti tema" onclick="toggleTheme()">
-          <span class="theme-icon">🌙</span>
-        </button>
+      <li class="nav-item dropdown">
+        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+          <span id="themeIcon">🌙</span>
+        </a>
+        <ul class="dropdown-menu dropdown-menu-end">
+          <li><a class="dropdown-item" href="javascript:setTheme('light')">☀️ Terang</a></li>
+          <li><a class="dropdown-item" href="javascript:setTheme('dark')">🌙 Gelap</a></li>
+          <li><a class="dropdown-item" href="javascript:setTheme('auto')">🌗 Otomatis</a></li>
+        </ul>
       </li>
       <li class="nav-item dropdown">
         <a class="nav-link d-flex align-items-center gap-2 dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
@@ -26,19 +31,17 @@
   </div>
 </nav>
 <script>
-function toggleTheme() {
-  var mode = document.documentElement.getAttribute('data-theme-mode') || 'auto';
-  var next = mode === 'dark' ? 'light' : (mode === 'light' ? 'auto' : 'dark');
-  var resolved = next === 'auto' ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : next;
+function setTheme(mode) {
+  var resolved = mode === 'auto' ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : mode;
   document.documentElement.setAttribute('data-bs-theme', resolved);
-  document.documentElement.setAttribute('data-theme-mode', next);
-  localStorage.setItem('theme', next);
-  var icon = document.querySelector('.theme-icon');
-  if (icon) icon.textContent = next === 'dark' ? '☀️' : (next === 'light' ? '🌙' : '🌗');
+  document.documentElement.setAttribute('data-theme-mode', mode);
+  localStorage.setItem('theme', mode);
+  var icon = document.getElementById('themeIcon');
+  if (icon) icon.textContent = mode === 'dark' ? '☀️' : (mode === 'light' ? '🌙' : '🌗');
 }
 (function() {
   var mode = document.documentElement.getAttribute('data-theme-mode') || 'auto';
-  var icon = document.querySelector('.theme-icon');
+  var icon = document.getElementById('themeIcon');
   if (icon) icon.textContent = mode === 'dark' ? '☀️' : (mode === 'light' ? '🌙' : '🌗');
 })();
 </script>
@@ -49,4 +52,6 @@ function toggleTheme() {
   display: inline-flex; align-items: center; justify-content: center;
   text-transform: uppercase;
 }
+[data-bs-theme="dark"] .table thead { background: var(--bs-dark-bg-subtle); }
+[data-bs-theme="light"] .table thead { background: var(--bs-light); }
 </style>
