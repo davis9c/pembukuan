@@ -1,13 +1,15 @@
-version: "3.8"
 services:
   app:
     build: .
     ports:
-      - "${PORT}:${PORT}"
+      - "${PORT:-8084}:${PORT:-8084}"
     volumes:
       - data:/data
     env_file:
       - .env
+    environment:
+      - DB_PATH=/data/pembukuan.db
+      - UPLOADS_DIR=/data/uploads
     restart: unless-stopped
 
 volumes:
